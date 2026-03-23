@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.env
+.env.*
+venv/
+.venv/
+
+# Dados sensíveis — nunca commitar parquets com dados de eleitores
+data/outputs/estado_sessao/*.parquet
+data/outputs/relatorios/*.parquet
+data/outputs/relatorios/*.xlsx
+data/cache_tse/*.parquet
+data/cache_tse/*.zip
+
+# ChromaDB — gerenciado via HF LFS ou volume externo
+# data/chromadb/   ← descomente para excluir do git
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

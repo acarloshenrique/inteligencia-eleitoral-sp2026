@@ -1,0 +1,38 @@
+name: Deploy to HF Spaces
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "requirements.txt"
+      - "Dockerfile"
+      - "README.md"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Push to HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git clone https://user:$HF_TOKEN@huggingface.co/spaces/acarloshenrique/alocador-eleitoral-sp2026 hf_space
+          cd hf_space
+          cp ../app.py .
+          cp ../requirements.txt .
+          cp ../Dockerfile .
+          cp ../README.md .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nenhuma mudanca"
+          else
+            git commit -m "Deploy ${{ github.sha }}"
+            git push
+            echo "Deploy concluido"
+          fi
