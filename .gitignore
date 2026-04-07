@@ -4,8 +4,12 @@ __pycache__/
 *.so
 .env
 .env.*
+!.env.example
 venv/
 .venv/
+.pip-tools-cache/
+.pytest_cache/
+pytest-cache-files-*/
 
 # Dados sensíveis — nunca commitar parquets com dados de eleitores
 data/outputs/estado_sessao/*.parquet

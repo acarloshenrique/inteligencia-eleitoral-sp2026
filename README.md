@@ -53,6 +53,18 @@ docker compose up --build
 Adicione o secret `GROQ_API_KEY` no HF Space:
 Settings → Variables and secrets → New secret
 
+## Dependências reproduzíveis
+
+- `requirements.in`: dependências diretas (fonte)
+- `requirements.txt`: lockfile gerado pelo `pip-tools`
+
+Atualizar lockfile:
+
+```bash
+python -m pip install pip-tools
+python -m piptools compile --resolver=backtracking --output-file requirements.txt requirements.in
+```
+
 ## Dados
 
 Os dados de eleitores e votação (parquets) não são versionados no Git por questões de privacidade.

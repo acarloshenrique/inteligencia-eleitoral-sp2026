@@ -6,13 +6,19 @@ services:
     ports:
       - "8501:7860"
     environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DATA_ROOT=${DATA_ROOT:-/app/data}
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - REQUIRE_DATA=${REQUIRE_DATA:-false}
+      - REQUIRE_GROQ_API_KEY=${REQUIRE_GROQ_API_KEY:-false}
+      - DF_MUN_TS=${DF_MUN_TS:-20260316_1855}
+      - PORT=7860
     volumes:
       # Monta dados locais sem precisar copiar para a imagem
-      - ./data:/app/data:ro
+      - ./data:/app/data:rw
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860/_stcore/health"]
+      test: ["CMD", "python", "healthcheck.py", "--mode", "ready"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11.9-slim
 
 WORKDIR /app
 
@@ -8,19 +8,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependências Python
-COPY requirements.txt .
+COPY requirements.in requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Código e dados
 COPY app.py .
-COPY data/ ./data/
+COPY healthcheck.py .
+RUN mkdir -p /app/data/outputs/estado_sessao \
+    /app/data/outputs/relatorios \
+    /app/data/chromadb \
+    /tmp/inteligencia_eleitoral/relatorios
 
 # Porta HF Spaces
 EXPOSE 7860
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
-    CMD curl -f http://localhost:7860/_stcore/health || exit 1
+    CMD python healthcheck.py --mode ready || exit 1
 
 ENV PYTHONUNBUFFERED=1
 

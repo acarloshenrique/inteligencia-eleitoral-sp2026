@@ -3,6 +3,7 @@ import streamlit as st
 import duckdb, chromadb, pickle, os, time, warnings
 import pandas as pd
 import numpy as np
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
@@ -18,14 +19,130 @@ st.set_page_config(
 )
 
 # ── Detecta ambiente ──────────────────────────────────────────────────────────
-_drive = Path("/content/drive/MyDrive/inteligencia_eleitoral")
-_hf    = Path("/app/data")
-RAIZ   = str(_drive) if _drive.exists() else str(_hf)
+def _resolve_data_root():
+    env_root = os.environ.get("DATA_ROOT")
+    candidatos = []
+    if env_root:
+        candidatos.append(Path(env_root))
+    candidatos.extend([
+        Path("./data"),
+        Path("/app/data"),
+        Path("/content/drive/MyDrive/inteligencia_eleitoral"),
+    ])
+    for p in candidatos:
+        if p.exists():
+            return p.resolve()
+    return candidatos[0].resolve()
 
-PASTA_EST     = RAIZ + "/outputs/estado_sessao"
-PASTA_REL     = RAIZ + "/outputs/relatorios"
-CHROMADB_PATH = RAIZ + "/chromadb"
-TS            = "20260316_1855"
+
+def _df_municipios_vazio():
+    cols = {
+        "ranking_final": pd.Series(dtype="int64"),
+        "municipio": pd.Series(dtype="string"),
+        "cluster": pd.Series(dtype="string"),
+        "indice_final": pd.Series(dtype="float64"),
+        "score_territorial_qt": pd.Series(dtype="float64"),
+        "VS_qt": pd.Series(dtype="float64"),
+        "ise_qt": pd.Series(dtype="float64"),
+        "PD_qt": pd.Series(dtype="float64"),
+        "pop_censo2022": pd.Series(dtype="float64"),
+        "perfil_economico": pd.Series(dtype="string"),
+    }
+    return pd.DataFrame(cols)
+
+
+DATA_ROOT = _resolve_data_root()
+PASTA_EST = DATA_ROOT / "outputs" / "estado_sessao"
+PASTA_REL = DATA_ROOT / "outputs" / "relatorios"
+CHROMADB_PATH = DATA_ROOT / "chromadb"
+RUNTIME_REL = Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "relatorios"
+TS = os.environ.get("DF_MUN_TS", "20260316_1855")
+
+
+def _env_bool(name, default=False):
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _get_app_env():
+    return os.environ.get("APP_ENV", "development").strip().lower()
+
+
+def _resolve_df_mun_path():
+    if not PASTA_EST.exists():
+        return None
+    fixo = PASTA_EST / f"df_mun_{TS}.parquet"
+    if fixo.exists():
+        return fixo
+    candidatos = sorted(PASTA_EST.glob("df_mun_*.parquet"), reverse=True)
+    return candidatos[0] if candidatos else None
+
+
+def _resolve_relatorio_path(nome_arquivo):
+    primario = PASTA_REL / nome_arquivo
+    if primario.exists():
+        return primario
+    fallback = RUNTIME_REL / nome_arquivo
+    return fallback if fallback.exists() else primario
+
+
+def _persistir_relatorio(df, nome_arquivo):
+    alvos = [PASTA_REL, RUNTIME_REL]
+    ultimo_erro = None
+    for pasta in alvos:
+        try:
+            pasta.mkdir(parents=True, exist_ok=True)
+            destino = pasta / nome_arquivo
+            df.to_parquet(destino, index=False)
+            return destino
+        except Exception as e:
+            ultimo_erro = e
+    raise ultimo_erro
+
+
+def _bootstrap_ambiente():
+    erros = []
+    avisos = []
+
+    app_env = _get_app_env()
+    if app_env not in {"development", "staging", "production"}:
+        erros.append("APP_ENV inválido. Use: development, staging ou production.")
+
+    require_data = _env_bool("REQUIRE_DATA", default=False)
+    require_groq = _env_bool("REQUIRE_GROQ_API_KEY", default=False)
+
+    if require_groq and not os.environ.get("GROQ_API_KEY"):
+        erros.append("REQUIRE_GROQ_API_KEY=true, mas GROQ_API_KEY não foi definida.")
+    elif not os.environ.get("GROQ_API_KEY"):
+        avisos.append("GROQ_API_KEY ausente: o app usará LLM simulado.")
+
+    df_mun_path = _resolve_df_mun_path()
+    if require_data and df_mun_path is None:
+        erros.append("REQUIRE_DATA=true, mas nenhum df_mun_*.parquet foi encontrado.")
+    elif df_mun_path is None:
+        avisos.append("Sem base de municípios em data/outputs/estado_sessao.")
+
+    for pasta in [PASTA_REL, RUNTIME_REL]:
+        try:
+            pasta.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            avisos.append(f"Não foi possível preparar pasta de saída {pasta}: {e}")
+
+    return {
+        "app_env": app_env,
+        "require_data": require_data,
+        "require_groq": require_groq,
+        "erros": erros,
+        "avisos": avisos,
+    }
+
+
+BOOTSTRAP = _bootstrap_ambiente()
+if BOOTSTRAP["erros"]:
+    st.error("Falha de bootstrap de ambiente:\n- " + "\n- ".join(BOOTSTRAP["erros"]))
+    st.stop()
 
 TETOS = {
     "deputado_federal":2_500_000,"deputado_estadual":1_350_000,
@@ -34,16 +151,29 @@ TETOS = {
     "prefeito_grande":4_200_000,"prefeito_medio":1_600_000,"prefeito_pequeno":420_000,
 }
 CARGOS_EST    = {"deputado_federal","deputado_estadual","governador","senador"}
+ALOC_COLS = [
+    "municipio", "cluster", "ranking", "indice", "PD_qt", "pop",
+    "budget", "digital", "offline", "meta_fb_ig", "youtube", "tiktok",
+    "whatsapp", "google_ads", "evento_presencial", "radio_local", "impresso",
+]
 PESOS_CLUSTER = {"Diamante":1.0,"Alavanca":0.70,"Consolidação":0.45,"Descarte":0.10}
 
 # ── Carrega recursos ──────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner="Carregando dados...")
 def carrega_dados():
-    df = pd.read_parquet(f"{PASTA_EST}/df_mun_{TS}.parquet")
+    caminho = _resolve_df_mun_path()
+    if caminho is None:
+        st.warning("Base de municípios não encontrada. Coloque os parquets em data/outputs/estado_sessao.")
+        return _df_municipios_vazio()
+    df = pd.read_parquet(caminho)
     if "cluster" not in df.columns:
         at, av = df["score_territorial_qt"]>70, df["VS_qt"]>70
         df["cluster"] = np.select([at&av,~at&av,at&~av,~at&~av],
                                    ["Diamante","Alavanca","Consolidação","Descarte"],"Descarte")
+    df_base = _df_municipios_vazio()
+    for col in df_base.columns:
+        if col not in df.columns:
+            df[col] = df_base[col]
     return df
 
 @st.cache_resource(show_spinner="Conectando banco de dados...")
@@ -55,15 +185,15 @@ def carrega_db(df_mun):
         ("secoes",      "secoes_score_top20_*.parquet"),
         ("mapa_tatico", "mapa_tatico_*.parquet"),
     ]:
-        # arquivo fixo
-        p = Path(PASTA_REL) / glob
+        p = _resolve_relatorio_path(glob)
         if p.exists():
             db.register(nome, pd.read_parquet(str(p)))
-        else:
-            # glob
-            found = sorted(Path(PASTA_REL).glob(glob), reverse=True)
-            if found:
-                db.register(nome, pd.read_parquet(str(found[0])))
+            continue
+        found = sorted(PASTA_REL.glob(glob), reverse=True)
+        if not found:
+            found = sorted(RUNTIME_REL.glob(glob), reverse=True)
+        if found:
+            db.register(nome, pd.read_parquet(str(found[0])))
     return db
 
 @st.cache_resource(show_spinner="Carregando embedder...")
@@ -72,7 +202,9 @@ def carrega_embedder():
 
 @st.cache_resource(show_spinner="Conectando ChromaDB...")
 def carrega_chroma():
-    c = chromadb.PersistentClient(path=CHROMADB_PATH)
+    if not CHROMADB_PATH.exists():
+        return None
+    c = chromadb.PersistentClient(path=str(CHROMADB_PATH))
     for nome in ("municipios_v2", "municipios"):
         try:
             col = c.get_collection(nome)
@@ -132,6 +264,10 @@ def _tem(tab):
 def aloca(budget, cargo, n, split_d):
     top = df_mun.nsmallest(n, "ranking_final").copy()
     top = top[top["cluster"] != "Descarte"]
+    if top.empty:
+        df_vazio = pd.DataFrame(columns=ALOC_COLS)
+        db.register("alocacao", df_vazio)
+        return df_vazio
     top["pw"] = top["indice_final"] * top["cluster"].map(PESOS_CLUSTER).fillna(0.1)
     top["pn"] = top["pw"] / top["pw"].sum()
     top["budget"] = (top["pn"] * budget).round(0)
@@ -161,8 +297,11 @@ def aloca(budget, cargo, n, split_d):
             **{k:round(bd*(v/dt),0) for k,v in dp.items()},
             **{k:round(bo*v,0) for k,v in op.items()},
         })
-    df_r = pd.DataFrame(rows)
-    df_r.to_parquet(f"{PASTA_REL}/ultima_alocacao.parquet", index=False)
+    df_r = pd.DataFrame(rows, columns=ALOC_COLS)
+    try:
+        _persistir_relatorio(df_r, "ultima_alocacao.parquet")
+    except Exception:
+        pass
     db.register("alocacao", df_r)
     return df_r
 
@@ -208,6 +347,11 @@ def responde(pergunta, historico):
 with st.sidebar:
     st.markdown("## 🗳 Inteligência Eleitoral SP")
     st.caption(f"644 municípios · {datetime.now().strftime('%d/%m/%Y')}")
+    st.caption(f"Ambiente: {BOOTSTRAP['app_env']}")
+    if BOOTSTRAP["avisos"]:
+        with st.expander("Bootstrap de ambiente", expanded=False):
+            for aviso in BOOTSTRAP["avisos"]:
+                st.warning(aviso)
     st.divider()
 
     st.markdown("### ⚙ Simulador de Alocação")
@@ -288,11 +432,11 @@ with t1:
 with t2:
     df_show = st.session_state.get("aloc")
     if df_show is None:
-        _p = Path(PASTA_REL) / "ultima_alocacao.parquet"
+        _p = _resolve_relatorio_path("ultima_alocacao.parquet")
         if _p.exists():
             df_show = pd.read_parquet(str(_p))
 
-    if df_show is not None:
+    if df_show is not None and not df_show.empty:
         bud_col = "budget" if "budget" in df_show.columns else "budget_total_mun"
         total   = df_show[bud_col].sum()
 
@@ -331,6 +475,8 @@ with t2:
             data=buf.getvalue(),
             file_name=f"alocacao_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    elif df_show is not None and df_show.empty:
+        st.warning("Sem municípios elegíveis para alocação com os dados atuais.")
     else:
         st.info("Use o simulador no menu lateral para gerar uma alocação.")
 
