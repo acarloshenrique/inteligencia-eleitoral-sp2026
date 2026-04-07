@@ -1,15 +1,15 @@
 
 import streamlit as st
-import duckdb, chromadb, pickle, os, time, warnings
+import duckdb, chromadb, os, warnings, logging
 import pandas as pd
 import numpy as np
 import tempfile
 from pathlib import Path
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
-from sklearn.preprocessing import QuantileTransformer
 
 warnings.filterwarnings("ignore")
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="Inteligência Eleitoral SP 2026",
@@ -210,9 +210,35 @@ def carrega_chroma():
             col = c.get_collection(nome)
             if col.count() >= 600:
                 return col
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Falha ao carregar coleção ChromaDB '%s': %s", nome, e)
     return None
+
+class MockCompletions:
+    def create(self, model, messages, max_tokens=512, temperature=0.3):
+        from unittest.mock import MagicMock
+
+        p = messages[-1]["content"].lower()
+        if "budget" in p or "alocar" in p:
+            t = "Recomendo concentrar o investimento nos municípios Diamante, com foco em eventos presenciais e Meta FB+IG para maximizar o retorno eleitoral."
+        elif "diamante" in p or "cluster" in p:
+            t = "Municípios Diamante combinam score territorial >70 e VS >70 — histórico favorável e alta receptividade social. São a prioridade máxima de investimento."
+        elif "seção" in p or "campo" in p:
+            t = "As seções de Alta prioridade têm maior volume de votos e alto engajamento nominal. Concentre eventos e distribuição de material nessas seções."
+        elif "ranking" in p or "priorit" in p:
+            t = "Cássia dos Coqueiros lidera (índice 94.5), seguida por Dirce Reis (88.8) e Cândido Rodrigues (85.8). Todos no cluster Diamante."
+        else:
+            t = "Posso analisar ranking de municípios, clusters táticos, alocação de budget, estratégia de mídia e priorização de seções eleitorais para SP 2026."
+        r = MagicMock()
+        r.choices[0].message.content = t
+        r.usage.total_tokens = len(t.split()) * 2
+        return r
+
+
+class MockLLMClient:
+    def __init__(self):
+        self.chat = type("Chat", (), {"completions": MockCompletions()})()
+
 
 @st.cache_resource(show_spinner="Conectando LLM...")
 def carrega_llm():
@@ -226,39 +252,28 @@ def carrega_llm():
                 messages=[{"role":"user","content":"OK"}], max_tokens=3
             )
             return c, True
-        except Exception:
-            pass
-    from unittest.mock import MagicMock
-    class _F:
-        class _C:
-            class _Cc:
-                def create(self,model,messages,max_tokens=512,temperature=0.3):
-                    p = messages[-1]["content"].lower()
-                    if "budget" in p or "alocar" in p:
-                        t="Recomendo concentrar o investimento nos municípios Diamante, com foco em eventos presenciais e Meta FB+IG para maximizar o retorno eleitoral."
-                    elif "diamante" in p or "cluster" in p:
-                        t="Municípios Diamante combinam score territorial >70 e VS >70 — histórico favorável e alta receptividade social. São a prioridade máxima de investimento."
-                    elif "seção" in p or "campo" in p:
-                        t="As seções de Alta prioridade têm maior volume de votos e alto engajamento nominal. Concentre eventos e distribuição de material nessas seções."
-                    elif "ranking" in p or "priorit" in p:
-                        t="Cássia dos Coqueiros lidera (índice 94.5), seguida por Dirce Reis (88.8) e Cândido Rodrigues (85.8). Todos no cluster Diamante."
-                    else:
-                        t="Posso analisar ranking de municípios, clusters táticos, alocação de budget, estratégia de mídia e priorização de seções eleitorais para SP 2026."
-                    r=MagicMock(); r.choices[0].message.content=t
-                    r.usage.total_tokens=len(t.split())*2; return r
-            def __init__(self): self.completions=self._Cc()
-        def __init__(self): self.chat=self._C()
-    return _F(), False
+        except Exception as e:
+            logger.warning("Falha ao conectar no provider LLM real; usando fallback simulado. Motivo: %s", e)
+    return MockLLMClient(), False
 
 df_mun   = carrega_dados()
 db       = carrega_db(df_mun)
-embedder = carrega_embedder()
-col      = carrega_chroma()
-llm, groq_real = carrega_llm()
+
+
+@st.cache_resource(show_spinner=False)
+def carrega_stack_ia():
+    col = carrega_chroma()
+    embedder = carrega_embedder() if col else None
+    llm, groq_real = carrega_llm()
+    return embedder, col, llm, groq_real
 
 def _tem(tab):
-    try: db.execute(f"SELECT 1 FROM {tab} LIMIT 1"); return True
-    except: return False
+    try:
+        db.execute(f"SELECT 1 FROM {tab} LIMIT 1")
+        return True
+    except Exception as e:
+        logger.debug("Tabela/visão indisponível (%s): %s", tab, e)
+        return False
 
 # ── Funções de alocação ───────────────────────────────────────────────────────
 def aloca(budget, cargo, n, split_d):
@@ -274,34 +289,49 @@ def aloca(budget, cargo, n, split_d):
     if cargo not in CARGOS_EST:
         cap = float(TETOS.get(cargo, budget))
         top["budget"] = top["budget"].clip(upper=cap)
-    rows = []
-    for _, r in top.iterrows():
-        pq = float(r.get("PD_qt", 50) or 50)
-        po = float(r.get("pop_censo2022", 50000) or 50000)
-        bd = round(r["budget"] * split_d, 0)
-        bo = round(r["budget"] * (1-split_d), 0)
-        j, s = min(pq/100,1.0), 1.0-min(pq/100,1.0)
-        bw = 0.05 if po < 20_000 else 0.0
-        dp = {"meta_fb_ig":0.40+s*0.15,"youtube":0.25,"tiktok":0.10+j*0.15,
-              "whatsapp":0.10+s*0.05+bw,"google_ads":0.10}
-        if bw: dp["meta_fb_ig"] = max(dp["meta_fb_ig"]-bw, 0.30)
-        dt = sum(dp.values())
-        op = {"evento_presencial":0.55 if pq>60 else 0.40 if pq>=40 else 0.25,
-              "radio_local":0.30 if pq>60 else 0.35 if pq>=40 else 0.45,
-              "impresso":0.15 if pq>60 else 0.25 if pq>=40 else 0.30}
-        rows.append({
-            "municipio":r["municipio"],"cluster":r["cluster"],
-            "ranking":int(r["ranking_final"]),"indice":round(r["indice_final"],1),
-            "PD_qt":round(pq,1),"pop":int(po),
-            "budget":r["budget"],"digital":bd,"offline":bo,
-            **{k:round(bd*(v/dt),0) for k,v in dp.items()},
-            **{k:round(bo*v,0) for k,v in op.items()},
-        })
-    df_r = pd.DataFrame(rows, columns=ALOC_COLS)
+    pq = pd.to_numeric(top.get("PD_qt", 50), errors="coerce").fillna(50.0)
+    po = pd.to_numeric(top.get("pop_censo2022", 50000), errors="coerce").fillna(50000.0)
+    bd = (top["budget"] * split_d).round(0)
+    bo = (top["budget"] * (1 - split_d)).round(0)
+    j = (pq / 100.0).clip(upper=1.0)
+    s = 1.0 - j
+    bw = np.where(po < 20_000, 0.05, 0.0)
+
+    meta_fb_ig = (0.40 + s * 0.15) - bw
+    meta_fb_ig = np.maximum(meta_fb_ig, 0.30)
+    youtube = np.full(len(top), 0.25)
+    tiktok = 0.10 + j * 0.15
+    whatsapp = 0.10 + s * 0.05 + bw
+    google_ads = np.full(len(top), 0.10)
+    dt = meta_fb_ig + youtube + tiktok + whatsapp + google_ads
+
+    evento_presencial = np.select([pq > 60, pq >= 40], [0.55, 0.40], default=0.25)
+    radio_local = np.select([pq > 60, pq >= 40], [0.30, 0.35], default=0.45)
+    impresso = np.select([pq > 60, pq >= 40], [0.15, 0.25], default=0.30)
+
+    df_r = pd.DataFrame({
+        "municipio": top["municipio"],
+        "cluster": top["cluster"],
+        "ranking": top["ranking_final"].astype(int),
+        "indice": top["indice_final"].round(1),
+        "PD_qt": pq.round(1),
+        "pop": po.astype(int),
+        "budget": top["budget"],
+        "digital": bd,
+        "offline": bo,
+        "meta_fb_ig": (bd * (meta_fb_ig / dt)).round(0),
+        "youtube": (bd * (youtube / dt)).round(0),
+        "tiktok": (bd * (tiktok / dt)).round(0),
+        "whatsapp": (bd * (whatsapp / dt)).round(0),
+        "google_ads": (bd * (google_ads / dt)).round(0),
+        "evento_presencial": (bo * evento_presencial).round(0),
+        "radio_local": (bo * radio_local).round(0),
+        "impresso": (bo * impresso).round(0),
+    })[ALOC_COLS]
     try:
         _persistir_relatorio(df_r, "ultima_alocacao.parquet")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Falha ao persistir relatório de alocação: %s", e)
     db.register("alocacao", df_r)
     return df_r
 
@@ -312,12 +342,16 @@ Clusters: Diamante (territorial>70 e VS>70) → máximo investimento | Alavanca 
 Responda em português, seja preciso, cite dados do contexto. Não invente valores."""
 
 def responde(pergunta, historico):
+    embedder, col, llm, _ = carrega_stack_ia()
     # Busca semântica
     sem_txt, est = "", ""
-    if col:
-        vec = embedder.encode([pergunta])[0].tolist()
-        res = col.query(query_embeddings=[vec], n_results=5)
-        sem_txt = ", ".join(m["municipio"] for m in res["metadatas"][0])
+    if col and embedder is not None:
+        try:
+            vec = embedder.encode([pergunta])[0].tolist()
+            res = col.query(query_embeddings=[vec], n_results=5)
+            sem_txt = ", ".join(m["municipio"] for m in res["metadatas"][0])
+        except Exception as e:
+            logger.warning("Busca semântica indisponível nesta consulta: %s", e)
     # SQL por intenção
     q = pergunta.lower()
     if ("budget" in q or "alocar" in q) and _tem("alocacao"):
@@ -332,16 +366,23 @@ def responde(pergunta, historico):
         sql = "SELECT ROUND(AVG(indice_final),1) as media,ROUND(MAX(indice_final),1) as maximo,COUNT(*) as total,SUM(CASE WHEN cluster='Diamante' THEN 1 ELSE 0 END) as diamante FROM municipios"
     else:
         sql = "SELECT municipio,cluster,ROUND(indice_final,1) as indice,ranking_final FROM municipios ORDER BY ranking_final LIMIT 15"
-    try:    est = db.execute(sql).df().to_string(index=False)
-    except: est = ""
+    try:
+        est = db.execute(sql).df().to_string(index=False)
+    except Exception as e:
+        logger.warning("Falha ao executar SQL contextual do chat: %s", e)
+        est = ""
     ctx  = f"Municípios relevantes: {sem_txt}\n\nDados:\n{est}"
     msgs = [{"role":"system","content":SYSTEM}]
     for h in historico[-6:]: msgs.append(h)
     msgs.append({"role":"user","content":f"CONTEXTO:\n{ctx}\n\nPERGUNTA: {pergunta}"})
-    r = llm.chat.completions.create(
-        model="llama-3.3-70b-versatile", messages=msgs, max_tokens=1024, temperature=0.3
-    )
-    return r.choices[0].message.content, sem_txt, r.usage.total_tokens
+    try:
+        r = llm.chat.completions.create(
+            model="llama-3.3-70b-versatile", messages=msgs, max_tokens=1024, temperature=0.3
+        )
+        return r.choices[0].message.content, sem_txt, r.usage.total_tokens
+    except Exception as e:
+        logger.error("Falha na geração da resposta do chat: %s", e)
+        return "Não foi possível gerar resposta agora. Tente novamente em instantes.", sem_txt, 0
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -385,8 +426,8 @@ with st.sidebar:
     st.markdown("### 📊 Índice Multicritério")
     st.markdown("Territorial **35%** · VS **25%** · ISE **20%** · PD **20%**")
     st.divider()
-    groq_ico = "✅ Groq real" if groq_real else "⚠ simulado"
-    chroma_ico = f"✅ {col.count()} docs" if col else "⚠ sem índice"
+    groq_ico = "✅ configurado" if os.environ.get("GROQ_API_KEY") else "⚠ simulado"
+    chroma_ico = "✅ índice disponível" if CHROMADB_PATH.exists() else "⚠ sem índice"
     st.caption(f"LLM: {groq_ico}")
     st.caption(f"ChromaDB: {chroma_ico}")
     st.caption(f"DuckDB: ✅ {db.execute('SELECT COUNT(*) FROM municipios').fetchone()[0]} mun.")
@@ -511,9 +552,10 @@ with t3:
             filtro = st.selectbox("Município", mun_opts, key="filtro_secao")
             if filtro == "Todos":
                 sql_s = "SELECT NM_MUNICIPIO as município, NR_ZONA as zona, NR_SECAO as seção, eleitores_aptos as votos, ROUND(engajamento*100,1) as engaj_pct, ROUND(score_secao,1) as score, prioridade_secao as prioridade FROM secoes WHERE prioridade_secao='Alta' ORDER BY score_secao DESC LIMIT 30"
+                st.dataframe(db.execute(sql_s).df(), use_container_width=True, hide_index=True)
             else:
-                sql_s = f"SELECT NM_MUNICIPIO as município, NR_ZONA as zona, NR_SECAO as seção, eleitores_aptos as votos, ROUND(engajamento*100,1) as engaj_pct, ROUND(score_secao,1) as score, prioridade_secao as prioridade FROM secoes WHERE NM_MUNICIPIO='{filtro}' ORDER BY score_secao DESC"
-            st.dataframe(db.execute(sql_s).df(), use_container_width=True, hide_index=True)
+                sql_s = "SELECT NM_MUNICIPIO as município, NR_ZONA as zona, NR_SECAO as seção, eleitores_aptos as votos, ROUND(engajamento*100,1) as engaj_pct, ROUND(score_secao,1) as score, prioridade_secao as prioridade FROM secoes WHERE NM_MUNICIPIO=? ORDER BY score_secao DESC"
+                st.dataframe(db.execute(sql_s, [filtro]).df(), use_container_width=True, hide_index=True)
 
         st.divider()
         st.markdown("#### Distribuição de Prioridade por Município")

@@ -48,8 +48,6 @@ colorama==0.4.6
     #   click
     #   tqdm
     #   uvicorn
-cramjam==2.11.0
-    # via fastparquet
 distro==1.9.0
     # via groq
 duckdb==1.5.1
@@ -58,8 +56,6 @@ durationpy==0.10
     # via kubernetes
 et-xmlfile==2.0.0
     # via openpyxl
-fastparquet==2026.3.0
-    # via -r requirements.in
 filelock==3.25.2
     # via
     #   huggingface-hub
@@ -68,7 +64,6 @@ flatbuffers==25.12.19
     # via onnxruntime
 fsspec==2026.3.0
     # via
-    #   fastparquet
     #   huggingface-hub
     #   torch
 gitdb==4.0.12
@@ -145,7 +140,6 @@ numpy==2.4.4
     # via
     #   -r requirements.in
     #   chromadb
-    #   fastparquet
     #   onnxruntime
     #   pandas
     #   pydeck
@@ -188,7 +182,6 @@ packaging==26.0
     # via
     #   altair
     #   build
-    #   fastparquet
     #   huggingface-hub
     #   onnxruntime
     #   streamlit
@@ -196,7 +189,6 @@ packaging==26.0
 pandas==3.0.2
     # via
     #   -r requirements.in
-    #   fastparquet
     #   streamlit
 pillow==12.2.0
     # via streamlit
