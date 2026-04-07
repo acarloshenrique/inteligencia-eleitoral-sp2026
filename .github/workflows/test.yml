@@ -16,10 +16,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt pytest
-      - run: |
-          if [ -d tests ]; then
-            pytest tests/ -v --tb=short
-          else
-            echo "No tests directory found; skipping pytest."
-          fi
-      - run: python -m py_compile app.py && echo "Syntax OK"
+      - run: test -d tests
+      - run: pip check
+      - run: pytest tests/ -v --tb=short
+      - run: python -m py_compile app.py healthcheck.py && echo "Syntax OK"
+      - run: python healthcheck.py --help

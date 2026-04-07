@@ -1,22 +1,11 @@
-
 import streamlit as st
-import duckdb, chromadb, os, warnings, logging
-import pandas as pd
-import numpy as np
-import tempfile
-from pathlib import Path
-from datetime import datetime
-from sentence_transformers import SentenceTransformer
 
-warnings.filterwarnings("ignore")
-logger = logging.getLogger(__name__)
+from presentation.app_main import run_app
 
-st.set_page_config(
-    page_title="Inteligência Eleitoral SP 2026",
-    page_icon="🗳",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+run_app()
+st.stop()
+
+'''
 
 # ── Detecta ambiente ──────────────────────────────────────────────────────────
 def _resolve_data_root():
@@ -600,3 +589,4 @@ with t4:
         column_config={c: st.column_config.NumberColumn(format="%.1f")
                        for c in ["Índice","Territorial","VS","ISE","PD"]},
     )
+'''
