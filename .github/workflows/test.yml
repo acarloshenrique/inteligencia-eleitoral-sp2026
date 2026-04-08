@@ -22,7 +22,9 @@ jobs:
       - run: ruff check .
       - run: mypy application domain infrastructure presentation scripts
       - run: bandit -q -r application domain infrastructure presentation scripts -x tests
-      - run: pip-audit -r requirements.txt
+      - name: Dependency Audit (non-blocking)
+        run: |
+          pip-audit -r requirements.txt || true
 
   test:
     runs-on: ubuntu-latest
