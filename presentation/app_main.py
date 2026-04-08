@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from application.use_cases_layered import executar_alocacao, responder_pergunta
 from config.settings import get_settings
 from domain.contracts import DataContractError
+from domain.errors import AppError
 from infrastructure.env import bootstrap_ambiente, build_paths
 from infrastructure.repositories import ChromaGroqAIService, DuckDBAnalyticsRepository, ParquetReportStore
 from infrastructure.storage import carrega_dados, carrega_db
@@ -54,11 +55,19 @@ def run_app():
 
         except DataContractError as e:
             st.error(f"Contrato de dados violado: {e}")
+        except AppError as e:
+            st.error(e.to_operational_message())
 
     t1, t2, t3, t4 = st.tabs(["💬 Analista", "📊 Alocação", "📍 Seções de Campo", "🏆 Ranking"])
 
     with t1:
-        render_tab_chat(lambda pergunta, hist: responder_pergunta(repo, ai_service, pergunta, hist))
+        def _responder(pergunta, hist):
+            try:
+                return responder_pergunta(repo, ai_service, pergunta, hist)
+            except AppError as e:
+                return e.to_operational_message(), "", 0
+
+        render_tab_chat(_responder)
     with t2:
         render_tab_alocacao(paths, report_store)
     with t3:

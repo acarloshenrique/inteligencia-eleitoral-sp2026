@@ -72,6 +72,8 @@ def test_data_pipeline_runs_all_steps_and_publishes_outputs():
             chromadb_path=chroma,
             runtime_rel=runtime_rel,
             ts="20260407_000000",
+            metadata_db_path=data_root / "metadata" / "jobs.sqlite3",
+            artifact_root=data_root / "artifacts",
         )
         result = run_versioned_data_pipeline(paths=paths, input_path=input_path, pipeline_version="vtest")
 

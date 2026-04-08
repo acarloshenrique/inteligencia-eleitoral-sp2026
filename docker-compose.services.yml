@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  web-ui:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+    ports:
+      - "8501:7860"
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+      - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - REQUIRE_DATA=${REQUIRE_DATA:-false}
+      - REQUIRE_GROQ_API_KEY=${REQUIRE_GROQ_API_KEY:-false}
+      - DF_MUN_TS=${DF_MUN_TS:-20260316_1855}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - RQ_QUEUE_NAME=${RQ_QUEUE_NAME:-jobs}
+      - METADATA_DB_PATH=${METADATA_DB_PATH:-/app/data/metadata/jobs.sqlite3}
+      - ARTIFACT_BACKEND=${ARTIFACT_BACKEND:-local}
+      - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_REGION=${S3_REGION:-us-east-1}
+    volumes:
+      - ./data:/app/data:rw
+    depends_on:
+      - api
+      - redis
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+      - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - RQ_QUEUE_NAME=${RQ_QUEUE_NAME:-jobs}
+      - METADATA_DB_PATH=${METADATA_DB_PATH:-/app/data/metadata/jobs.sqlite3}
+      - ARTIFACT_BACKEND=${ARTIFACT_BACKEND:-local}
+      - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_REGION=${S3_REGION:-us-east-1}
+    volumes:
+      - ./data:/app/data:rw
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.worker
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+      - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - RQ_QUEUE_NAME=${RQ_QUEUE_NAME:-jobs}
+      - METADATA_DB_PATH=${METADATA_DB_PATH:-/app/data/metadata/jobs.sqlite3}
+      - ARTIFACT_BACKEND=${ARTIFACT_BACKEND:-local}
+      - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_REGION=${S3_REGION:-us-east-1}
+    volumes:
+      - ./data:/app/data:rw
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${S3_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data/minio:/data

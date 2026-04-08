@@ -21,6 +21,8 @@ def _build_paths(tmp: str) -> AppPaths:
         chromadb_path=chroma,
         runtime_rel=runtime_rel,
         ts="20260407_000000",
+        metadata_db_path=root / "metadata" / "jobs.sqlite3",
+        artifact_root=root / "artifacts",
     )
 
 

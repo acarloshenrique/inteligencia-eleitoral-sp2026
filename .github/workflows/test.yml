@@ -5,9 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -15,9 +18,35 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt pytest
-      - run: test -d tests
-      - run: pip check
-      - run: pytest tests/ -v --tb=short
+      - run: pip install -r requirements.txt ruff mypy bandit pip-audit
+      - run: ruff check .
+      - run: mypy application domain infrastructure presentation scripts
+      - run: bandit -q -r application domain infrastructure presentation scripts -x tests
+      - run: pip-audit -r requirements.txt
+
+  test:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest pytest-cov
+      - run: pytest tests -v --tb=short --cov=application --cov=domain --cov=infrastructure --cov-report=term-missing --cov-fail-under=65 -m "not load"
       - run: python -m py_compile app.py healthcheck.py && echo "Syntax OK"
       - run: python healthcheck.py --help
+
+  load:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: pytest tests/load -v --tb=short -m load

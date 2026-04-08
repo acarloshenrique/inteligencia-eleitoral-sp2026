@@ -19,6 +19,8 @@ class AppPaths:
     chromadb_path: Path
     runtime_rel: Path
     ts: str
+    metadata_db_path: Path
+    artifact_root: Path
 
 
 class Settings(BaseSettings):
@@ -32,6 +34,16 @@ class Settings(BaseSettings):
     df_mun_ts: str = Field(default="20260316_1855", alias="DF_MUN_TS")
     port: int = Field(default=7860, alias="PORT")
     rag_cost_per_1k_tokens_usd: float = Field(default=0.00059, alias="RAG_COST_PER_1K_TOKENS_USD")
+    redis_url: str = Field(default="redis://redis:6379/0", alias="REDIS_URL")
+    rq_queue_name: str = Field(default="jobs", alias="RQ_QUEUE_NAME")
+    metadata_db_path: str | None = Field(default=None, alias="METADATA_DB_PATH")
+    artifact_backend: str = Field(default="local", alias="ARTIFACT_BACKEND")
+    artifact_local_root: str | None = Field(default=None, alias="ARTIFACT_LOCAL_ROOT")
+    s3_endpoint_url: str = Field(default="", alias="S3_ENDPOINT_URL")
+    s3_bucket: str = Field(default="", alias="S3_BUCKET")
+    s3_access_key: str = Field(default="", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="", alias="S3_SECRET_KEY")
+    s3_region: str = Field(default="us-east-1", alias="S3_REGION")
 
     @field_validator("app_env", mode="before")
     @classmethod
@@ -62,6 +74,16 @@ class Settings(BaseSettings):
             chromadb_path=data_root / "chromadb",
             runtime_rel=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "relatorios",
             ts=self.df_mun_ts,
+            metadata_db_path=(
+                Path(self.metadata_db_path).resolve()
+                if self.metadata_db_path
+                else (data_root / "metadata" / "jobs.sqlite3").resolve()
+            ),
+            artifact_root=(
+                Path(self.artifact_local_root).resolve()
+                if self.artifact_local_root
+                else (data_root / "artifacts").resolve()
+            ),
         )
 
 

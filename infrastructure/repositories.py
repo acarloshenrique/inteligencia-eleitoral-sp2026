@@ -113,7 +113,8 @@ class ChromaGroqAIService:
             if col is None or embedder is None:
                 fallback_vector = True
             else:
-                vec = embedder.encode([pergunta])[0].tolist()
+                encoded = embedder.encode([pergunta])[0]
+                vec = encoded.tolist() if hasattr(encoded, "tolist") else list(encoded)
                 res = col.query(query_embeddings=[vec], n_results=n_results)
                 metadatas = res.get("metadatas") or []
                 municipios = []

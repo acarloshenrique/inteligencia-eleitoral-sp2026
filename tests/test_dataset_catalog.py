@@ -33,6 +33,8 @@ def test_register_dataset_version_writes_catalog_and_latest_index():
             chromadb_path=chroma,
             runtime_rel=runtime_rel,
             ts="20260407_010101",
+            metadata_db_path=data_root / "metadata" / "jobs.sqlite3",
+            artifact_root=data_root / "artifacts",
         )
 
         metadata = build_dataset_metadata(

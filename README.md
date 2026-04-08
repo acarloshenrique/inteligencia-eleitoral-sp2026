@@ -48,6 +48,27 @@ docker compose up --build
 # Acesse em http://localhost:8501
 ```
 
+## Arquitetura de serviços
+
+- `web-ui` (Streamlit): interface para analistas e operadores.
+- `api` (FastAPI): endpoints para tarefas pesadas e controle de jobs.
+- `worker` (RQ): processamento assíncrono de indexação/export.
+- `redis`: broker da fila.
+- `artifact store`: backend local ou S3-compatible.
+- `metadata db`: banco transacional para status/resultados de jobs.
+
+Compose da arquitetura separada:
+
+```bash
+docker compose -f docker-compose.services.yml up --build
+```
+
+API de jobs:
+
+- `POST /v1/jobs/reindex`
+- `POST /v1/jobs/export`
+- `GET /v1/jobs/{job_id}`
+
 ## Configuração
 
 Adicione o secret `GROQ_API_KEY` no HF Space:

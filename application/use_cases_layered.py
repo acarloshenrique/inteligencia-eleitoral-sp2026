@@ -4,6 +4,7 @@ from application.interfaces import AIService, AnalyticsRepository, ReportStore
 from domain.allocation import calcular_alocacao
 from domain.constants import CARGOS_EST, PESOS_CLUSTER, SYSTEM_PROMPT, TETOS
 from domain.contracts import validate_alocacao_output, validate_municipios_input
+from domain.errors import AppOperationalError, ErrorCode, ErrorDetail
 
 logger = logging.getLogger(__name__)
 
@@ -17,23 +18,41 @@ def executar_alocacao(
     n: int,
     split_d: float,
 ):
-    df_mun = validate_municipios_input(df_mun)
-    df_r = calcular_alocacao(
-        df_mun=df_mun,
-        budget=budget,
-        cargo=cargo,
-        n=n,
-        split_d=split_d,
-        pesos_cluster=PESOS_CLUSTER,
-        tetos=TETOS,
-        cargos_est=CARGOS_EST,
-    )
-    df_r = validate_alocacao_output(df_r)
+    try:
+        df_mun = validate_municipios_input(df_mun)
+        df_r = calcular_alocacao(
+            df_mun=df_mun,
+            budget=budget,
+            cargo=cargo,
+            n=n,
+            split_d=split_d,
+            pesos_cluster=PESOS_CLUSTER,
+            tetos=TETOS,
+            cargos_est=CARGOS_EST,
+        )
+        df_r = validate_alocacao_output(df_r)
+    except Exception as e:
+        raise AppOperationalError(
+            ErrorDetail(
+                code=ErrorCode.ALLOCATION_CONTRACT_VIOLATION,
+                message="Falha de contrato ou regra ao calcular alocacao.",
+                operation="executar_alocacao",
+            )
+        ) from e
     try:
         report_store.save_report(df_r, "ultima_alocacao.parquet")
     except Exception as e:
         logger.warning("Falha ao persistir relatorio de alocacao: %s", e)
-    repo.register_table("alocacao", df_r)
+    try:
+        repo.register_table("alocacao", df_r)
+    except Exception as e:
+        raise AppOperationalError(
+            ErrorDetail(
+                code=ErrorCode.ALLOCATION_EXECUTION_FAILED,
+                message="Nao foi possivel registrar alocacao no repositorio.",
+                operation="executar_alocacao",
+            )
+        ) from e
     return df_r
 
 
@@ -72,6 +91,13 @@ def responder_pergunta(
             est = est_df.to_string(index=False)
     except Exception as e:
         logger.warning("Falha ao executar SQL contextual do chat: %s", e)
+        raise AppOperationalError(
+            ErrorDetail(
+                code=ErrorCode.CHAT_QUERY_FAILED,
+                message="Consulta contextual do chat falhou no repositorio.",
+                operation="responder_pergunta.query_df",
+            )
+        ) from e
 
     ctx = f"Municipios relevantes: {sem_txt}\n\nDados:\n{est}"
     try:
@@ -79,4 +105,10 @@ def responder_pergunta(
         return resposta, sem_txt, total_tokens
     except Exception as e:
         logger.error("Falha na geracao da resposta do chat: %s", e)
-        return "Nao foi possivel gerar resposta agora. Tente novamente em instantes.", sem_txt, 0
+        raise AppOperationalError(
+            ErrorDetail(
+                code=ErrorCode.CHAT_LLM_FAILED,
+                message="Nao foi possivel gerar resposta do assistente no momento.",
+                operation="responder_pergunta.complete",
+            )
+        ) from e

@@ -1,8 +1,6 @@
 import logging
 
-import chromadb
 import streamlit as st
-from sentence_transformers import SentenceTransformer
 
 from config.settings import get_settings
 
@@ -37,6 +35,8 @@ class MockLLMClient:
 
 @st.cache_resource(show_spinner="Carregando embedder...")
 def carrega_embedder():
+    from sentence_transformers import SentenceTransformer
+
     return SentenceTransformer("all-MiniLM-L6-v2")
 
 
@@ -44,6 +44,8 @@ def carrega_embedder():
 def carrega_chroma(chromadb_path):
     if not chromadb_path.exists():
         return None
+    import chromadb
+
     c = chromadb.PersistentClient(path=str(chromadb_path))
     for nome in ("municipios_v2", "municipios"):
         try:

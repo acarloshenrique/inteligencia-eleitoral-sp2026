@@ -1,6 +1,5 @@
 import logging
 
-import duckdb
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -36,6 +35,8 @@ def carrega_dados(paths):
 
 @st.cache_resource(show_spinner="Conectando banco de dados...")
 def carrega_db(paths, df_mun):
+    import duckdb
+
     db = duckdb.connect()
     db.register("municipios", df_mun)
 
