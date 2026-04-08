@@ -26,10 +26,17 @@ def test_api_enqueue_reindex_job(monkeypatch):
             def get_job(self, *args, **kwargs):
                 return {"id": "1", "status": "queued"}
 
+            def log_audit(self, *args, **kwargs):
+                return None
+
         monkeypatch.setattr("api.main._metadata_db", lambda: _Db())
         monkeypatch.setattr("api.main.get_queue", lambda *_: _Queue())
 
         client = TestClient(app)
-        res = client.post("/v1/jobs/reindex", json={"input_path": str(p), "collection_name": "municipios_v2", "force": False})
+        res = client.post(
+            "/v1/jobs/reindex",
+            json={"input_path": str(p), "collection_name": "municipios_v2", "force": False},
+            headers={"Authorization": "Bearer dev-admin-token"},
+        )
         assert res.status_code == 200
         assert res.json()["status"] == "queued"

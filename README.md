@@ -68,6 +68,18 @@ API de jobs:
 - `POST /v1/jobs/reindex`
 - `POST /v1/jobs/export`
 - `GET /v1/jobs/{job_id}`
+- `GET /v1/audit` (admin)
+
+Autenticação API:
+
+- Header `Authorization: Bearer <token>`
+- RBAC básico por role (`admin`, `operator`, `viewer`)
+- Tokens podem vir de cofre (`SECRET_BACKEND=vault`) ou fallback local controlado.
+
+Governança e operação:
+
+- LGPD baseline: `docs/lgpd.md`
+- Runbooks: `runbooks/incident-response.md`, `runbooks/backup-restore.md`, `runbooks/dr-recovery-test.md`
 
 ## Configuração
 

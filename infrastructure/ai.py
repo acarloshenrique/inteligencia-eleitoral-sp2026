@@ -3,6 +3,7 @@ import logging
 import streamlit as st
 
 from config.settings import get_settings
+from infrastructure.secret_factory import build_secret_provider
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,8 @@ def carrega_chroma(chromadb_path):
 
 @st.cache_resource(show_spinner="Conectando LLM...")
 def carrega_llm():
-    key = get_settings().groq_api_key
+    settings = get_settings()
+    key = build_secret_provider(settings).get_secret("GROQ_API_KEY") or settings.groq_api_key
     if key:
         try:
             from groq import Groq

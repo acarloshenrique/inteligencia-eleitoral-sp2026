@@ -44,6 +44,19 @@ class MetadataDb:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS audit_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    actor TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    resource TEXT NOT NULL,
+                    metadata_json TEXT,
+                    created_at_utc TEXT NOT NULL
+                )
+                """
+            )
 
     def create_job(self, job_id: str, job_type: str, payload: dict[str, Any]) -> None:
         now = datetime.now(UTC).isoformat()
@@ -100,3 +113,53 @@ class MetadataDb:
             "created_at_utc": row[6],
             "updated_at_utc": row[7],
         }
+
+    def log_audit(self, *, actor: str, role: str, action: str, resource: str, metadata: dict[str, Any] | None = None) -> None:
+        now = datetime.now(UTC).isoformat()
+        payload = json.dumps(metadata or {}, ensure_ascii=False)
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO audit_events (actor, role, action, resource, metadata_json, created_at_utc)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (actor, role, action, resource, payload, now),
+            )
+
+    def list_audit(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, actor, role, action, resource, metadata_json, created_at_utc
+                FROM audit_events
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (int(limit),),
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            out.append(
+                {
+                    "id": row[0],
+                    "actor": row[1],
+                    "role": row[2],
+                    "action": row[3],
+                    "resource": row[4],
+                    "metadata": json.loads(row[5]) if row[5] else {},
+                    "created_at_utc": row[6],
+                }
+            )
+        return out
+
+    def purge_older_than_days(self, days: int) -> dict[str, int]:
+        cutoff_dt = datetime.now(UTC).timestamp() - max(1, days) * 86400
+        removed = {"jobs": 0, "audit_events": 0}
+        with self._conn() as conn:
+            # timestamps são ISO UTC; comparação textual funciona para esse formato.
+            cutoff_iso = datetime.fromtimestamp(cutoff_dt, UTC).isoformat()
+            cur = conn.execute("DELETE FROM jobs WHERE created_at_utc < ?", (cutoff_iso,))
+            removed["jobs"] = cur.rowcount if cur.rowcount is not None else 0
+            cur2 = conn.execute("DELETE FROM audit_events WHERE created_at_utc < ?", (cutoff_iso,))
+            removed["audit_events"] = cur2.rowcount if cur2.rowcount is not None else 0
+        return removed

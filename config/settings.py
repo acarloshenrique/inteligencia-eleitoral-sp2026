@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     s3_access_key: str = Field(default="", alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(default="", alias="S3_SECRET_KEY")
     s3_region: str = Field(default="us-east-1", alias="S3_REGION")
+    secret_backend: str = Field(default="env", alias="SECRET_BACKEND")
+    vault_addr: str = Field(default="", alias="VAULT_ADDR")
+    vault_token: str = Field(default="", alias="VAULT_TOKEN")
+    vault_kv_path: str = Field(default="", alias="VAULT_KV_PATH")
+    retention_days: int = Field(default=180, alias="RETENTION_DAYS")
+    lgpd_anonymization_salt: str = Field(default="change-me", alias="LGPD_ANONYMIZATION_SALT")
 
     @field_validator("app_env", mode="before")
     @classmethod

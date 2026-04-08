@@ -3,11 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from config.settings import get_settings
+from domain.lgpd import anonymize_columns, minimize_dataframe
 from infrastructure.artifact_store import LocalArtifactStore, S3ArtifactStore
 from infrastructure.data_pipeline import run_versioned_data_pipeline
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.metadata_db import MetadataDb
+from infrastructure.secret_factory import build_secret_provider
 from infrastructure.vector_index_job import run_vector_reindex_job
 
 
@@ -59,7 +63,19 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db.set_status(job_id, "running")
     try:
         source_path = Path(payload["input_path"])
-        pipeline_result = run_versioned_data_pipeline(paths=paths, input_path=source_path, pipeline_version="v2")
+        work_source = source_path
+        if bool(payload.get("minimize", True)) or bool(payload.get("anonymize", False)):
+            df = pd.read_parquet(source_path)
+            if bool(payload.get("minimize", True)):
+                df = minimize_dataframe(df)
+            if bool(payload.get("anonymize", False)):
+                salt = build_secret_provider(settings).get_secret("LGPD_ANONYMIZATION_SALT") or settings.lgpd_anonymization_salt
+                df = anonymize_columns(df, ["municipio"], salt=salt)
+            tmp_path = paths.runtime_rel / f"export_input_{job_id}.parquet"
+            tmp_path.parent.mkdir(parents=True, exist_ok=True)
+            df.to_parquet(tmp_path, index=False)
+            work_source = tmp_path
+        pipeline_result = run_versioned_data_pipeline(paths=paths, input_path=work_source, pipeline_version="v2")
         published = Path(pipeline_result["publish"]["published_path"])
         artifact_key = f"datasets/{pipeline_result['run_id']}/{published.name}"
         artifact_uri = store.put_file(published, artifact_key)
