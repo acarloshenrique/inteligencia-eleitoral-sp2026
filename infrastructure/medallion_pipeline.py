@@ -779,21 +779,33 @@ def _materialize_serving_layer(
     cache_path = serving_root / "query_cache.parquet"
 
     table_stats: list[dict[str, Any]] = []
+
+    def _safe_identifier(value: str) -> str:
+        cleaned = "".join(ch for ch in value if ch.isalnum() or ch == "_")
+        if not cleaned:
+            raise MedallionPipelineError("identificador SQL invalido para tabela de serving")
+        return cleaned
+
     try:
         import duckdb  # type: ignore
 
         conn = duckdb.connect(str(serving_db_path))
         try:
             for table_name, df in marts.items():
+                safe_table = _safe_identifier(table_name)
                 conn.register("_tmp_df", df)
-                conn.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM _tmp_df")
+                conn.execute(f"CREATE OR REPLACE TABLE {safe_table} AS SELECT * FROM _tmp_df")  # nosec B608
                 if "municipio_id_ibge7" in df.columns:
-                    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_municipio ON {table_name}(municipio_id_ibge7)")
+                    conn.execute(
+                        f"CREATE INDEX IF NOT EXISTS idx_{safe_table}_municipio ON {safe_table}(municipio_id_ibge7)"
+                    )  # nosec B608
                 if "canonical_key" in df.columns:
-                    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_ckey ON {table_name}(canonical_key)")
-                conn.execute(f"ANALYZE {table_name}")
-                row_count = int(conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0])
-                table_stats.append({"table": table_name, "rows": row_count})
+                    conn.execute(
+                        f"CREATE INDEX IF NOT EXISTS idx_{safe_table}_ckey ON {safe_table}(canonical_key)"
+                    )  # nosec B608
+                conn.execute(f"ANALYZE {safe_table}")  # nosec B608
+                row_count = int(conn.execute(f"SELECT COUNT(*) FROM {safe_table}").fetchone()[0])  # nosec B608
+                table_stats.append({"table": safe_table, "rows": row_count})
 
             cache_sql = """
                 CREATE OR REPLACE TABLE query_cache AS

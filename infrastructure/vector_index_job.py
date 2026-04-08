@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any, Callable
 
@@ -11,6 +12,9 @@ import pandas as pd
 
 class VectorIndexError(RuntimeError):
     pass
+
+
+logger = logging.getLogger(__name__)
 
 
 def _sha256_file(path: Path) -> str:
@@ -107,8 +111,8 @@ def run_vector_reindex_job(
 
     try:
         client.delete_collection(collection_name)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao remover colecao existente '%s': %s", collection_name, exc)
     collection = client.get_or_create_collection(collection_name)
 
     df = pd.read_parquet(input_parquet)
