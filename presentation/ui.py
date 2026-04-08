@@ -1,13 +1,14 @@
-import os
 from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
+from config.settings import get_settings
 from domain.constants import TETOS
 
 
-def render_sidebar(bootstrap, chromadb_path, db):
+def render_sidebar(bootstrap, chromadb_path, repo):
+    settings = get_settings()
     with st.sidebar:
         st.markdown("## 🗳 Inteligência Eleitoral SP")
         st.caption(f"644 municípios · {datetime.now().strftime('%d/%m/%Y')}")
@@ -42,11 +43,11 @@ def render_sidebar(bootstrap, chromadb_path, db):
         st.markdown("### 📊 Índice Multicritério")
         st.markdown("Territorial **35%** · VS **25%** · ISE **20%** · PD **20%**")
         st.divider()
-        groq_ico = "✅ configurado" if os.environ.get("GROQ_API_KEY") else "⚠ simulado"
+        groq_ico = "✅ configurado" if settings.groq_api_key else "⚠ simulado"
         chroma_ico = "✅ índice disponível" if chromadb_path.exists() else "⚠ sem índice"
         st.caption(f"LLM: {groq_ico}")
         st.caption(f"ChromaDB: {chroma_ico}")
-        st.caption(f"DuckDB: ✅ {db.execute('SELECT COUNT(*) FROM municipios').fetchone()[0]} mun.")
+        st.caption(f"DuckDB: ✅ {repo.count_municipios()} mun.")
 
     return budget, cargo, n_mun, split_d, gerar
 
@@ -89,14 +90,10 @@ def render_tab_chat(responder_fn):
         st.rerun()
 
 
-def render_tab_alocacao(paths):
+def render_tab_alocacao(paths, report_store):
     df_show = st.session_state.get("aloc")
     if df_show is None:
-        p = paths.pasta_rel / "ultima_alocacao.parquet"
-        if not p.exists():
-            p = paths.runtime_rel / "ultima_alocacao.parquet"
-        if p.exists():
-            df_show = pd.read_parquet(str(p))
+        df_show = report_store.load_report("ultima_alocacao.parquet")
 
     if df_show is not None and not df_show.empty:
         bud_col = "budget" if "budget" in df_show.columns else "budget_total_mun"
@@ -167,13 +164,13 @@ def render_tab_alocacao(paths):
         st.info("Use o simulador no menu lateral para gerar uma alocação.")
 
 
-def render_tab_secoes(db, table_exists_fn):
-    if table_exists_fn(db, "secoes") and table_exists_fn(db, "mapa_tatico"):
+def render_tab_secoes(repo):
+    if repo.table_exists("secoes") and repo.table_exists("mapa_tatico"):
         col_a, col_b = st.columns([1, 1])
 
         with col_a:
             st.markdown("#### Mapa Tático por Município")
-            df_mt = db.execute(
+            df_mt = repo.query_df(
                 """
                 SELECT NM_MUNICIPIO as município, cluster,
                        total_secoes as seções,
@@ -198,19 +195,19 @@ def render_tab_secoes(db, table_exists_fn):
         with col_b:
             st.markdown("#### Top Seções Alta Prioridade")
             mun_opts = ["Todos"] + sorted(
-                db.execute("SELECT DISTINCT NM_MUNICIPIO FROM secoes ORDER BY 1").df()["NM_MUNICIPIO"].tolist()
+                repo.query_df("SELECT DISTINCT NM_MUNICIPIO FROM secoes ORDER BY 1")["NM_MUNICIPIO"].tolist()
             )
             filtro = st.selectbox("Município", mun_opts, key="filtro_secao")
             if filtro == "Todos":
                 sql_s = "SELECT NM_MUNICIPIO as município, NR_ZONA as zona, NR_SECAO as seção, eleitores_aptos as votos, ROUND(engajamento*100,1) as engaj_pct, ROUND(score_secao,1) as score, prioridade_secao as prioridade FROM secoes WHERE prioridade_secao='Alta' ORDER BY score_secao DESC LIMIT 30"
-                st.dataframe(db.execute(sql_s).df(), use_container_width=True, hide_index=True)
+                st.dataframe(repo.query_df(sql_s), use_container_width=True, hide_index=True)
             else:
                 sql_s = "SELECT NM_MUNICIPIO as município, NR_ZONA as zona, NR_SECAO as seção, eleitores_aptos as votos, ROUND(engajamento*100,1) as engaj_pct, ROUND(score_secao,1) as score, prioridade_secao as prioridade FROM secoes WHERE NM_MUNICIPIO=? ORDER BY score_secao DESC"
-                st.dataframe(db.execute(sql_s, [filtro]).df(), use_container_width=True, hide_index=True)
+                st.dataframe(repo.query_df(sql_s, [filtro]), use_container_width=True, hide_index=True)
 
         st.divider()
         st.markdown("#### Distribuição de Prioridade por Município")
-        df_dist = db.execute(
+        df_dist = repo.query_df(
             """
             SELECT NM_MUNICIPIO,
                    SUM(CASE WHEN prioridade_secao='Alta'  THEN 1 ELSE 0 END) as Alta,
@@ -219,7 +216,7 @@ def render_tab_secoes(db, table_exists_fn):
                    COUNT(*) as Total
             FROM secoes GROUP BY NM_MUNICIPIO ORDER BY Alta DESC
             """
-        ).df()
+        )
         st.dataframe(df_dist, use_container_width=True, hide_index=True)
     else:
         st.info("Rode o Sprint 2 (sprint2_execucao_v2.py) para carregar os dados de seções.")

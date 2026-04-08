@@ -6,7 +6,7 @@ services:
     ports:
       - "8501:7860"
     environment:
-      - APP_ENV=${APP_ENV:-development}
+      - APP_ENV=${APP_ENV:-dev}
       - DATA_ROOT=${DATA_ROOT:-/app/data}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - REQUIRE_DATA=${REQUIRE_DATA:-false}

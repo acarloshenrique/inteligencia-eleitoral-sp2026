@@ -1,15 +1,24 @@
 import logging
 
+from application.interfaces import AIService, AnalyticsRepository, ReportStore
+from application.use_cases_layered import executar_alocacao as _executar_alocacao
+from application.use_cases_layered import responder_pergunta as _responder_pergunta
 from domain.allocation import calcular_alocacao
 from domain.constants import CARGOS_EST, PESOS_CLUSTER, SYSTEM_PROMPT, TETOS
-from infrastructure.ai import carrega_stack_ia
-from infrastructure.env import persistir_relatorio
-from infrastructure.storage import tem_tabela
 
 logger = logging.getLogger(__name__)
 
 
-def executar_alocacao(paths, db, df_mun, budget, cargo, n, split_d):
+def executar_alocacao(
+    repo: AnalyticsRepository,
+    report_store: ReportStore,
+    df_mun,
+    budget: int,
+    cargo: str,
+    n: int,
+    split_d: float,
+):
+    return _executar_alocacao(repo, report_store, df_mun, budget, cargo, n, split_d)
     df_r = calcular_alocacao(
         df_mun=df_mun,
         budget=budget,
@@ -21,15 +30,20 @@ def executar_alocacao(paths, db, df_mun, budget, cargo, n, split_d):
         cargos_est=CARGOS_EST,
     )
     try:
-        persistir_relatorio(paths, df_r, "ultima_alocacao.parquet")
+        report_store.save_report(df_r, "ultima_alocacao.parquet")
     except Exception as e:
         logger.warning("Falha ao persistir relatório de alocação: %s", e)
-    db.register("alocacao", df_r)
+    repo.register_table("alocacao", df_r)
     return df_r
 
 
-def responder_pergunta(paths, db, pergunta, historico):
-    embedder, col, llm, _ = carrega_stack_ia(paths.chromadb_path)
+def responder_pergunta(
+    repo: AnalyticsRepository,
+    ai_service: AIService,
+    pergunta: str,
+    historico: list[dict],
+):
+    return _responder_pergunta(repo, ai_service, pergunta, historico)
 
     sem_txt, est = "", ""
     if col and embedder is not None:

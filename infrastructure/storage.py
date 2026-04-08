@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from infrastructure.env import df_municipios_vazio, resolve_df_mun_path, resolve_relatorio_path
+from infrastructure.sql_safety import is_allowed_table_name
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,16 @@ def carrega_db(paths, df_mun):
 
 
 def tem_tabela(db, tab):
+    if not is_allowed_table_name(tab):
+        logger.warning("Nome de tabela rejeitado por politica de seguranca: %s", tab)
+        return False
     try:
-        db.execute(f"SELECT 1 FROM {tab} LIMIT 1")
-        return True
+        tabelas = db.execute("SHOW TABLES").df()
+        if "name" in tabelas.columns:
+            nomes = {str(n).lower() for n in tabelas["name"].tolist()}
+        else:
+            nomes = {str(n).lower() for n in tabelas.iloc[:, 0].tolist()}
+        return tab.lower() in nomes
     except Exception as e:
         logger.debug("Tabela/visão indisponível (%s): %s", tab, e)
         return False

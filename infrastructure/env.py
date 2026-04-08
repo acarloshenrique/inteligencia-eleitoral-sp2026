@@ -1,55 +1,9 @@
-import os
-import tempfile
-from dataclasses import dataclass
-from pathlib import Path
-
 import pandas as pd
-
-
-@dataclass(frozen=True)
-class AppPaths:
-    data_root: Path
-    pasta_est: Path
-    pasta_rel: Path
-    chromadb_path: Path
-    runtime_rel: Path
-    ts: str
-
-
-def env_bool(name, default=False):
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    return raw.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
-
-
-def get_app_env():
-    return os.environ.get("APP_ENV", "development").strip().lower()
-
-
-def resolve_data_root():
-    env_root = os.environ.get("DATA_ROOT")
-    candidatos = []
-    if env_root:
-        candidatos.append(Path(env_root))
-    candidatos.extend([Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")])
-    for p in candidatos:
-        if p.exists():
-            return p.resolve()
-    return candidatos[0].resolve()
+from config.settings import AppPaths, get_settings
 
 
 def build_paths():
-    data_root = resolve_data_root()
-    ts = os.environ.get("DF_MUN_TS", "20260316_1855")
-    return AppPaths(
-        data_root=data_root,
-        pasta_est=data_root / "outputs" / "estado_sessao",
-        pasta_rel=data_root / "outputs" / "relatorios",
-        chromadb_path=data_root / "chromadb",
-        runtime_rel=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "relatorios",
-        ts=ts,
-    )
+    return get_settings().build_paths()
 
 
 def df_municipios_vazio():
@@ -101,19 +55,17 @@ def persistir_relatorio(paths: AppPaths, df, nome_arquivo):
 
 
 def bootstrap_ambiente(paths: AppPaths):
+    settings = get_settings()
     erros = []
     avisos = []
 
-    app_env = get_app_env()
-    if app_env not in {"development", "staging", "production"}:
-        erros.append("APP_ENV inválido. Use: development, staging ou production.")
+    app_env = settings.app_env
+    require_data = settings.require_data
+    require_groq = settings.require_groq_api_key
 
-    require_data = env_bool("REQUIRE_DATA", default=False)
-    require_groq = env_bool("REQUIRE_GROQ_API_KEY", default=False)
-
-    if require_groq and not os.environ.get("GROQ_API_KEY"):
+    if require_groq and not settings.groq_api_key:
         erros.append("REQUIRE_GROQ_API_KEY=true, mas GROQ_API_KEY não foi definida.")
-    elif not os.environ.get("GROQ_API_KEY"):
+    elif not settings.groq_api_key:
         avisos.append("GROQ_API_KEY ausente: o app usará LLM simulado.")
 
     df_mun_path = resolve_df_mun_path(paths)

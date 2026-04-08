@@ -1,9 +1,10 @@
 import logging
-import os
 
 import chromadb
 import streamlit as st
 from sentence_transformers import SentenceTransformer
+
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def carrega_chroma(chromadb_path):
 
 @st.cache_resource(show_spinner="Conectando LLM...")
 def carrega_llm():
-    key = os.environ.get("GROQ_API_KEY", "")
+    key = get_settings().groq_api_key
     if key:
         try:
             from groq import Groq

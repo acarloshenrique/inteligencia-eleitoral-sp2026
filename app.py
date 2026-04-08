@@ -257,9 +257,13 @@ def carrega_stack_ia():
     return embedder, col, llm, groq_real
 
 def _tem(tab):
+    allowed = {"municipios", "alocacao", "secoes", "mapa_tatico"}
+    if tab not in allowed:
+        return False
     try:
-        db.execute(f"SELECT 1 FROM {tab} LIMIT 1")
-        return True
+        tabelas = db.execute("SHOW TABLES").df()
+        col = "name" if "name" in tabelas.columns else tabelas.columns[0]
+        return tab in set(tabelas[col].astype(str).str.lower().tolist())
     except Exception as e:
         logger.debug("Tabela/visão indisponível (%s): %s", tab, e)
         return False
