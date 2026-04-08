@@ -21,9 +21,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt ruff mypy bandit pip-audit
+      - run: pip install -r requirements.txt ruff "mypy==1.11.2" bandit pip-audit
       - run: ruff check .
-      - run: mypy application domain infrastructure presentation scripts
+      - run: mypy --no-incremental application domain infrastructure presentation scripts
       - run: bandit -q -r application domain infrastructure presentation scripts -x tests
       - name: Dependency Audit (non-blocking)
         run: |
