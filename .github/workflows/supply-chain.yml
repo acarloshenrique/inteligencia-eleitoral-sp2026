@@ -32,7 +32,7 @@ jobs:
           name: sbom-spdx
           path: sbom.spdx.json
       - name: Trivy FS Scan
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: fs
           scan-ref: .
