@@ -36,6 +36,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt pytest pytest-cov
+      - run: pytest tests/contract -v --tb=short -m contract
       - run: pytest tests -v --tb=short --cov=application --cov=domain --cov=infrastructure --cov-report=term-missing --cov-fail-under=65 -m "not load"
       - run: python -m py_compile app.py healthcheck.py && echo "Syntax OK"
       - run: python healthcheck.py --help

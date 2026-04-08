@@ -48,6 +48,27 @@ docker compose up --build
 # Acesse em http://localhost:8501
 ```
 
+## Open data crosswalk
+
+Novo fluxo para ampliar cobertura de dados abertos e enriquecer o ranking municipal:
+
+- sincronizacao incremental de assets HTTP (`ETag` / `Last-Modified`)
+- mapeamento canonico de municipio (`codigo_tse` + `codigo_ibge`)
+- chave mestre canonica (`municipio_id_ibge7 + ano + mes + turno`)
+- enriquecimento opcional com indicadores socioeconomicos
+- publicacao versionada com catalogo e metricas de `join_rate`
+
+Scripts:
+
+```bash
+python scripts/sync_open_data_assets.py --asset "nome|url|arquivo.csv"
+python scripts/run_open_data_crosswalk.py --mapping-csv data/open_data/raw/municipios_tse_ibge.csv
+```
+
+Detalhes: `docs/open-data-crosswalk.md`
+Priorizacao de fontes: `docs/open-data-sources.md`
+Arquitetura medallion: `docs/medallion-pipeline.md`
+
 ## Arquitetura de serviços
 
 - `web-ui` (Streamlit): interface para analistas e operadores.

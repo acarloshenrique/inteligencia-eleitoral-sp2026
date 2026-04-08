@@ -1,0 +1,97 @@
+{
+  "accepted_a": [
+    {
+      "key": "tse_ibge_correspondencia",
+      "nome": "TSE-IBGE codigos oficiais",
+      "prioridade": "A",
+      "area": "chaves",
+      "score": 0.9925,
+      "accepted": true,
+      "endpoint": "https://dadosabertos.tse.jus.br/dataset/?groups=dados-de-apoio",
+      "reasons": []
+    },
+    {
+      "key": "tse_resultados_municipio",
+      "nome": "TSE resultados por municipio",
+      "prioridade": "A",
+      "area": "eleitoral",
+      "score": 0.985,
+      "accepted": true,
+      "endpoint": "https://dadosabertos.tse.jus.br/",
+      "reasons": []
+    },
+    {
+      "key": "ibge_localidades",
+      "nome": "IBGE API Localidades",
+      "prioridade": "A",
+      "area": "demografico",
+      "score": 0.985,
+      "accepted": true,
+      "endpoint": "https://servicodados.ibge.gov.br/api/docs/localidades",
+      "reasons": []
+    },
+    {
+      "key": "seade_municipal",
+      "nome": "SEADE municipal SP",
+      "prioridade": "A",
+      "area": "socioeconomico_sp",
+      "score": 0.982,
+      "accepted": true,
+      "endpoint": "https://repositorio.seade.gov.br/",
+      "reasons": []
+    },
+    {
+      "key": "tse_resultados_secao",
+      "nome": "TSE resultados por secao",
+      "prioridade": "A",
+      "area": "eleitoral",
+      "score": 0.9805,
+      "accepted": true,
+      "endpoint": "https://dadosabertos.tse.jus.br/",
+      "reasons": []
+    },
+    {
+      "key": "ibge_sidra",
+      "nome": "IBGE SIDRA indicadores",
+      "prioridade": "A",
+      "area": "socioeconomico",
+      "score": 0.97,
+      "accepted": true,
+      "endpoint": "https://apisidra.ibge.gov.br/",
+      "reasons": []
+    }
+  ],
+  "accepted_b": [
+    {
+      "key": "transparencia_transferencias",
+      "nome": "Portal da Transparencia transferencias",
+      "prioridade": "B",
+      "area": "fiscal",
+      "score": 0.925,
+      "accepted": true,
+      "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+      "reasons": []
+    },
+    {
+      "key": "transparencia_emendas",
+      "nome": "Portal da Transparencia emendas",
+      "prioridade": "B",
+      "area": "fiscal",
+      "score": 0.913,
+      "accepted": true,
+      "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+      "reasons": []
+    },
+    {
+      "key": "transparencia_despesas",
+      "nome": "Portal da Transparencia despesas",
+      "prioridade": "B",
+      "area": "fiscal",
+      "score": 0.901,
+      "accepted": true,
+      "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+      "reasons": []
+    }
+  ],
+  "rejected": []
+}

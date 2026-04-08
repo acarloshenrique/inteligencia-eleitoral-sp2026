@@ -1,0 +1,110 @@
+[
+  {
+    "key": "tse_resultados_municipio",
+    "nome": "TSE resultados por municipio",
+    "prioridade": "A",
+    "area": "eleitoral",
+    "cobertura_municipal": 1.0,
+    "atualizacao_dias": 7,
+    "licenca_aberta": true,
+    "schema_quality": 0.9,
+    "endpoint": "https://dadosabertos.tse.jus.br/",
+    "notes": "fonte primaria para sinal eleitoral"
+  },
+  {
+    "key": "tse_resultados_secao",
+    "nome": "TSE resultados por secao",
+    "prioridade": "A",
+    "area": "eleitoral",
+    "cobertura_municipal": 0.99,
+    "atualizacao_dias": 7,
+    "licenca_aberta": true,
+    "schema_quality": 0.9,
+    "endpoint": "https://dadosabertos.tse.jus.br/",
+    "notes": "granularidade operacional por secao/zona"
+  },
+  {
+    "key": "tse_ibge_correspondencia",
+    "nome": "TSE-IBGE codigos oficiais",
+    "prioridade": "A",
+    "area": "chaves",
+    "cobertura_municipal": 1.0,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.95,
+    "endpoint": "https://dadosabertos.tse.jus.br/dataset/?groups=dados-de-apoio",
+    "notes": "fonte de verdade para join de codigos"
+  },
+  {
+    "key": "ibge_localidades",
+    "nome": "IBGE API Localidades",
+    "prioridade": "A",
+    "area": "demografico",
+    "cobertura_municipal": 1.0,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.9,
+    "endpoint": "https://servicodados.ibge.gov.br/api/docs/localidades",
+    "notes": "base canonical de municipios"
+  },
+  {
+    "key": "ibge_sidra",
+    "nome": "IBGE SIDRA indicadores",
+    "prioridade": "A",
+    "area": "socioeconomico",
+    "cobertura_municipal": 0.98,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.86,
+    "endpoint": "https://apisidra.ibge.gov.br/",
+    "notes": "renda, educacao e demografia"
+  },
+  {
+    "key": "seade_municipal",
+    "nome": "SEADE municipal SP",
+    "prioridade": "A",
+    "area": "socioeconomico_sp",
+    "cobertura_municipal": 1.0,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.88,
+    "endpoint": "https://repositorio.seade.gov.br/",
+    "notes": "vulnerabilidade, emprego, saude e educacao para SP"
+  },
+  {
+    "key": "transparencia_transferencias",
+    "nome": "Portal da Transparencia transferencias",
+    "prioridade": "B",
+    "area": "fiscal",
+    "cobertura_municipal": 0.9,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.8,
+    "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+    "notes": "contexto fiscal complementar"
+  },
+  {
+    "key": "transparencia_emendas",
+    "nome": "Portal da Transparencia emendas",
+    "prioridade": "B",
+    "area": "fiscal",
+    "cobertura_municipal": 0.88,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.78,
+    "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+    "notes": "execucao de emendas parlamentares por municipio"
+  },
+  {
+    "key": "transparencia_despesas",
+    "nome": "Portal da Transparencia despesas",
+    "prioridade": "B",
+    "area": "fiscal",
+    "cobertura_municipal": 0.86,
+    "atualizacao_dias": 30,
+    "licenca_aberta": true,
+    "schema_quality": 0.76,
+    "endpoint": "https://portaldatransparencia.gov.br/api-de-dados",
+    "notes": "despesas e favorecidos para contexto fiscal"
+  }
+]
