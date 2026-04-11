@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +13,8 @@ import pandas as pd
 from config.settings import AppPaths, get_settings
 from domain.open_data_contracts import (
     validate_gold_mart_municipio_eleitoral,
+    validate_silver_dim_tempo,
+    validate_silver_dim_territorio,
     validate_silver_dim_municipio,
     validate_silver_fato_municipio,
 )
@@ -25,7 +27,9 @@ from infrastructure.data_quality import (
 )
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.lgpd_compliance import apply_lgpd_purpose_policy, enforce_retention_policy
+from infrastructure.load_manifest import build_load_manifest
 from infrastructure.source_contracts import validate_input_contracts
+from infrastructure.territory_matching import build_alias_dimension, layered_match_territory
 
 
 class MedallionPipelineError(RuntimeError):
@@ -77,6 +81,154 @@ def _normalize_text(value: str) -> str:
 def _normalize_ibge7(value: Any) -> str:
     digits = "".join(ch for ch in str(value) if ch.isdigit())
     return digits.zfill(7) if digits else ""
+
+
+def _normalize_optional_int(value: Any) -> int | None:
+    if pd.isna(value):
+        return None
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return None
+    return int(digits)
+
+
+def _pick_first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    lowered = {str(col).lower(): str(col) for col in df.columns}
+    for candidate in candidates:
+        if candidate.lower() in lowered:
+            return lowered[candidate.lower()]
+    return None
+
+
+def _encode_geohash(latitude: float | None, longitude: float | None, precision: int = 7) -> str | None:
+    if latitude is None or longitude is None or pd.isna(latitude) or pd.isna(longitude):
+        return None
+    lat_interval = [-90.0, 90.0]
+    lon_interval = [-180.0, 180.0]
+    geohash_chars = "0123456789bcdefghjkmnpqrstuvwxyz"
+    is_even = True
+    bit = 0
+    ch = 0
+    output = []
+    bits = [16, 8, 4, 2, 1]
+    while len(output) < precision:
+        if is_even:
+            mid = sum(lon_interval) / 2
+            if float(longitude) >= mid:
+                ch |= bits[bit]
+                lon_interval[0] = mid
+            else:
+                lon_interval[1] = mid
+        else:
+            mid = sum(lat_interval) / 2
+            if float(latitude) >= mid:
+                ch |= bits[bit]
+                lat_interval[0] = mid
+            else:
+                lat_interval[1] = mid
+        is_even = not is_even
+        if bit < 4:
+            bit += 1
+        else:
+            output.append(geohash_chars[ch])
+            bit = 0
+            ch = 0
+    return "".join(output)
+
+
+def _first_sunday_of_october(year: int) -> date:
+    first = date(int(year), 10, 1)
+    return first + timedelta(days=(6 - first.weekday()) % 7)
+
+
+def _build_dim_tempo(
+    *,
+    silver_municipio: pd.DataFrame,
+    silver_secao: pd.DataFrame,
+    silver_fiscal: pd.DataFrame,
+    inputs: MedallionInputs,
+) -> pd.DataFrame:
+    years: list[int] = []
+    for frame in [silver_municipio, silver_secao, silver_fiscal]:
+        if not frame.empty and "ano" in frame.columns:
+            years.extend(pd.to_numeric(frame["ano"], errors="coerce").dropna().astype(int).tolist())
+    if inputs.ano is not None:
+        years.append(int(inputs.ano))
+    if not years:
+        years.append(datetime.now(UTC).year)
+
+    min_year = min(years)
+    max_year = max(years)
+    rows: list[dict[str, Any]] = []
+    current = date(min_year, 1, 1)
+    end = date(max_year, 12, 31)
+    while current <= end:
+        election_day = _first_sunday_of_october(current.year)
+        campaign_start = election_day - timedelta(days=45)
+        pre_campaign_start = date(current.year, 1, 1)
+        is_historical = current.year < max_year
+        is_pre_campaign = pre_campaign_start <= current < campaign_start
+        is_campaign = campaign_start <= current <= election_day
+        is_event = current in {pre_campaign_start, campaign_start, election_day}
+        if current == election_day:
+            event = "eleicao_turno_1"
+            event_type = "eleitoral_oficial"
+        elif current == campaign_start:
+            event = "inicio_janela_campanha"
+            event_type = "campanha"
+        elif current == pre_campaign_start:
+            event = "inicio_pre_campanha"
+            event_type = "pre_campanha"
+        else:
+            event = None
+            event_type = None
+
+        if is_event:
+            media_pulse = "alto"
+        elif is_campaign:
+            media_pulse = "medio"
+        elif is_pre_campaign:
+            media_pulse = "baixo"
+        else:
+            media_pulse = "base"
+
+        if is_historical:
+            phase = "historico_eleitoral"
+        elif is_campaign:
+            phase = "janela_campanha"
+        elif is_pre_campaign:
+            phase = "pre_campanha"
+        else:
+            phase = "pos_eleicao"
+
+        iso = current.isocalendar()
+        rows.append(
+            {
+                "tempo_id": current.strftime("%Y%m%d"),
+                "data": current.isoformat(),
+                "ano": current.year,
+                "mes": current.month,
+                "dia": current.day,
+                "semana_iso": int(iso.week),
+                "ano_semana_iso": f"{iso.year}-W{int(iso.week):02d}",
+                "dia_semana": current.weekday() + 1,
+                "nome_dia_semana": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"][current.weekday()],
+                "trimestre": (current.month - 1) // 3 + 1,
+                "ciclo_eleitoral": current.year,
+                "fase_calendario": phase,
+                "is_historico_eleitoral": bool(is_historical),
+                "is_pre_campanha": bool(is_pre_campaign and not is_historical),
+                "is_janela_campanha": bool(is_campaign and not is_historical),
+                "is_evento": bool(is_event),
+                "evento": event,
+                "tipo_evento": event_type,
+                "pulso_midia": media_pulse,
+                "is_pulso_midia": bool(media_pulse in {"alto", "medio"}),
+                "dias_ate_eleicao": int((election_day - current).days),
+            }
+        )
+        current += timedelta(days=1)
+    return validate_silver_dim_tempo(pd.DataFrame(rows))
 
 
 def _pick_column(df: pd.DataFrame, candidates: list[str], *, label: str) -> str:
@@ -231,24 +383,140 @@ def _build_dim_municipio(mapping_csv_path: Path) -> tuple[pd.DataFrame, pd.DataF
     dim = dim.drop_duplicates(subset=["municipio_id_ibge7"]).reset_index(drop=True)
     dim = validate_silver_dim_municipio(dim)
 
-    alias_rows: list[dict[str, str]] = []
+    alias_map: dict[str, list[str]] = {}
     for _, row in dim.iterrows():
-        aliases = {str(row["nome_municipio"]).strip()}
+        aliases = []
         if alias_col:
             src = mapping_df.loc[mapping_df[codigo_ibge_col].map(_normalize_ibge7) == row["municipio_id_ibge7"], alias_col]
             if not src.empty:
-                raw_aliases = str(src.iloc[0]).split(";")
-                aliases.update([a.strip() for a in raw_aliases if a.strip()])
-        for alias in aliases:
-            alias_rows.append(
+                aliases.extend([_normalize_text(a.strip()) for a in str(src.iloc[0]).split(";") if a.strip()])
+        alias_map[str(row["municipio_id_ibge7"])] = aliases
+    dim_alias = build_alias_dimension(dim_municipio=dim, alias_map=alias_map)
+    if not dim_alias.empty:
+        dim_alias["alias_nome"] = dim_alias["alias_nome"].astype(str).str.strip()
+        dim_alias["alias_norm"] = dim_alias["alias_nome"].map(_normalize_text)
+        dim_alias = dim_alias.drop_duplicates(subset=["municipio_id_ibge7", "alias_norm"]).reset_index(drop=True)
+    return dim, dim_alias
+
+
+def _build_dim_territorio(
+    mapping_csv_path: Path,
+    dim_municipio: pd.DataFrame,
+    dim_alias: pd.DataFrame,
+    secao_df: pd.DataFrame,
+    inputs: MedallionInputs,
+) -> pd.DataFrame:
+    mapping_df = pd.read_csv(mapping_csv_path)
+    codigo_ibge_col = _pick_column(mapping_df, ["codigo_ibge", "cod_ibge", "id_municipio_ibge"], label="codigo_ibge")
+    codigo_tse_col = _pick_column(mapping_df, ["codigo_tse", "cod_tse", "cd_mun_tse"], label="codigo_tse")
+    nome_col = _pick_column(mapping_df, ["nome_municipio", "municipio", "nm_municipio"], label="nome_municipio")
+    uf_col = _pick_first_existing_column(mapping_df, ["uf", "sigla_uf"])
+    lat_col = _pick_first_existing_column(mapping_df, ["latitude", "lat", "latitude_municipio"])
+    lon_col = _pick_first_existing_column(mapping_df, ["longitude", "lon", "lng", "longitude_municipio"])
+
+    years = []
+    if not secao_df.empty and "ano" in secao_df.columns:
+        years.extend(pd.to_numeric(secao_df["ano"], errors="coerce").dropna().astype(int).tolist())
+    vigencia_inicio = f"{min(years)}-01-01" if years else None
+    vigencia_fim = f"{max(years)}-12-31" if years else None
+
+    base_rows: list[dict[str, Any]] = []
+    for _, row in mapping_df.iterrows():
+        codigo_ibge = _normalize_ibge7(row[codigo_ibge_col])
+        codigo_tse = str(row[codigo_tse_col]).strip()
+        nome = str(row[nome_col]).strip()
+        uf = str(row[uf_col]).strip().upper() if uf_col else inputs.uf
+        latitude = pd.to_numeric(row[lat_col], errors="coerce") if lat_col else pd.NA
+        longitude = pd.to_numeric(row[lon_col], errors="coerce") if lon_col else pd.NA
+        geohash = _encode_geohash(None if pd.isna(latitude) else float(latitude), None if pd.isna(longitude) else float(longitude))
+        base_rows.append(
+            {
+                "territorio_id": f"mun:{codigo_ibge}:0:0",
+                "cod_tse_municipio": codigo_tse,
+                "cod_ibge_municipio": codigo_ibge,
+                "uf": uf,
+                "nome_padronizado": nome,
+                "zona_eleitoral": pd.NA,
+                "secao_eleitoral": pd.NA,
+                "latitude": latitude,
+                "longitude": longitude,
+                "geohash": geohash,
+                "vigencia_inicio": vigencia_inicio,
+                "vigencia_fim": vigencia_fim,
+            }
+        )
+
+    dim_territorio = pd.DataFrame(base_rows)
+    if secao_df.empty:
+        return validate_silver_dim_territorio(dim_territorio)
+
+    municipio_col = _pick_column(secao_df, ["municipio", "nome_municipio"], label="municipio")
+    secao_work = secao_df.copy()
+    secao_work["municipio_norm_input"] = secao_work[municipio_col].astype(str).map(_normalize_text)
+    secao_match = layered_match_territory(
+        base_df=secao_work,
+        dim_municipio=dim_municipio,
+        dim_alias=dim_alias,
+        input_name_col=municipio_col,
+    )
+    secao_work = secao_match.matched_df
+    if "uf" in secao_work.columns:
+        secao_work["uf_resolved"] = secao_work["uf"].astype(str).str.upper().str.strip()
+    else:
+        secao_work["uf_resolved"] = inputs.uf
+
+    zone_rows = []
+    section_rows = []
+    for _, row in secao_work.iterrows():
+        codigo_ibge = str(row.get("municipio_id_ibge7", "")).strip()
+        codigo_tse = str(row.get("codigo_tse", "")).strip()
+        if not codigo_ibge:
+            continue
+        nome = str(row.get("nome_municipio", "")).strip()
+        zona = _normalize_optional_int(row.get("zona"))
+        secao = _normalize_optional_int(row.get("secao"))
+        uf = str(row.get("uf_resolved", inputs.uf)).strip().upper() or inputs.uf
+        if zona is not None:
+            zone_rows.append(
                 {
-                    "municipio_id_ibge7": str(row["municipio_id_ibge7"]),
-                    "alias_nome": alias,
-                    "alias_norm": _normalize_text(alias),
+                    "territorio_id": f"zona:{codigo_ibge}:{zona}:0",
+                    "cod_tse_municipio": codigo_tse,
+                    "cod_ibge_municipio": codigo_ibge,
+                    "uf": uf,
+                    "nome_padronizado": nome,
+                    "zona_eleitoral": zona,
+                    "secao_eleitoral": pd.NA,
+                    "latitude": pd.NA,
+                    "longitude": pd.NA,
+                    "geohash": None,
+                    "vigencia_inicio": vigencia_inicio,
+                    "vigencia_fim": vigencia_fim,
                 }
             )
-    dim_alias = pd.DataFrame(alias_rows).drop_duplicates(subset=["municipio_id_ibge7", "alias_norm"]).reset_index(drop=True)
-    return dim, dim_alias
+        if zona is not None and secao is not None:
+            section_rows.append(
+                {
+                    "territorio_id": f"secao:{codigo_ibge}:{zona}:{secao}",
+                    "cod_tse_municipio": codigo_tse,
+                    "cod_ibge_municipio": codigo_ibge,
+                    "uf": uf,
+                    "nome_padronizado": nome,
+                    "zona_eleitoral": zona,
+                    "secao_eleitoral": secao,
+                    "latitude": pd.NA,
+                    "longitude": pd.NA,
+                    "geohash": None,
+                    "vigencia_inicio": vigencia_inicio,
+                    "vigencia_fim": vigencia_fim,
+                }
+            )
+
+    dim_territorio = pd.concat(
+        [dim_territorio, pd.DataFrame(zone_rows), pd.DataFrame(section_rows)],
+        ignore_index=True,
+    )
+    dim_territorio = dim_territorio.drop_duplicates(subset=["territorio_id"]).reset_index(drop=True)
+    return validate_silver_dim_territorio(dim_territorio)
 
 
 def _build_silver_fato_municipio(base_df: pd.DataFrame, dim_alias: pd.DataFrame, dim_municipio: pd.DataFrame, inputs: MedallionInputs) -> pd.DataFrame:
@@ -260,14 +528,21 @@ def _build_silver_fato_municipio(base_df: pd.DataFrame, dim_alias: pd.DataFrame,
     silver["ano"] = ano
     silver["mes"] = mes
     silver["turno"] = turno
-    silver = silver.merge(dim_alias, left_on="municipio_norm_input", right_on="alias_norm", how="left")
-    silver = silver.merge(
-        dim_municipio[["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio"]],
-        on="municipio_id_ibge7",
-        how="left",
+    code_col = None
+    for candidate in ("codigo_tse", "cod_tse", "cd_mun_tse"):
+        if candidate in silver.columns:
+            code_col = candidate
+            break
+    match_result = layered_match_territory(
+        base_df=silver,
+        dim_municipio=dim_municipio,
+        dim_alias=dim_alias,
+        input_name_col="municipio",
+        input_code_col=code_col,
     )
+    silver = match_result.matched_df
     silver["canonical_key"] = _build_canonical_key(silver)
-    silver["join_status"] = silver["municipio_id_ibge7"].map(lambda v: "matched" if pd.notna(v) and str(v).strip() else "no_match")
+    silver["join_confidence"] = pd.to_numeric(silver.get("join_confidence"), errors="coerce")
 
     sort_cols = ["canonical_key"]
     if "indice_final" in silver.columns:
@@ -276,6 +551,7 @@ def _build_silver_fato_municipio(base_df: pd.DataFrame, dim_alias: pd.DataFrame,
     silver = silver.sort_values(sort_cols, ascending=[True, False] if len(sort_cols) > 1 else [True])
     silver = silver.drop_duplicates(subset=["canonical_key"], keep="first")
     silver = validate_silver_fato_municipio(silver)
+    silver.attrs["review_queue_df"] = match_result.review_queue_df
     return silver.reset_index(drop=True)
 
 
@@ -344,6 +620,38 @@ def _metric_column(df: pd.DataFrame, candidates: list[str], fallback: float = 0.
     return pd.Series([fallback] * len(df), index=df.index, dtype=float)
 
 
+def _enrich_ibge_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["pop_total"] = _metric_column(out, ["pop_total", "populacao", "pop_censo2022"])
+    out["densidade_demografica"] = _metric_column(out, ["densidade", "densidade_demografica"])
+    out["renda_media"] = _metric_column(out, ["renda_media", "renda", "renda_per_capita"])
+    out["educacao_indice"] = _metric_column(out, ["educacao_indice", "indice_educacao", "ideb", "escolaridade"])
+    out["urbanizacao_pct"] = _metric_column(out, ["urbanizacao", "taxa_urbanizacao", "urbanizacao_pct"])
+    out["idade_mediana"] = _metric_column(out, ["idade_mediana", "mediana_idade", "idade"])
+    out["acesso_internet_pct"] = _metric_column(out, ["acesso_internet", "internet_pct", "domicilios_internet"])
+    out["estrutura_urbana_indice"] = _metric_column(
+        out,
+        ["estrutura_urbana", "infraestrutura_urbana", "estrutura_urbana_indice"],
+    )
+    out["ruralidade_pct"] = _metric_column(out, ["ruralidade", "ruralidade_pct", "populacao_rural_pct"])
+    return out
+
+
+def _enrich_seade_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["ipvs"] = _metric_column(out, ["ipvs", "indice_ipvs"])
+    out["emprego_formal"] = _metric_column(out, ["emprego_formal", "emprego", "taxa_emprego"])
+    out["urbanizacao_pct"] = _metric_column(out, ["urbanizacao", "taxa_urbanizacao", "urbanizacao_pct"])
+    out["acesso_internet_pct"] = _metric_column(out, ["acesso_internet", "internet_pct", "domicilios_internet"])
+    out["estrutura_urbana_indice"] = _metric_column(
+        out,
+        ["estrutura_urbana", "infraestrutura_urbana", "estrutura_urbana_indice"],
+    )
+    out["ruralidade_pct"] = _metric_column(out, ["ruralidade", "ruralidade_pct", "populacao_rural_pct"])
+    out["saude"] = _metric_column(out, ["saude", "indice_saude", "cobertura_saude"])
+    return out
+
+
 def _select_window(df: pd.DataFrame, window_cycles: int) -> tuple[pd.DataFrame, list[int]]:
     if "ano" not in df.columns:
         return df, []
@@ -386,41 +694,133 @@ def _build_gold_marts(
 
     ibge_merge = silver_ibge.copy()
     if not ibge_merge.empty:
-        ibge_merge["pop_total"] = _metric_column(ibge_merge, ["pop_total", "populacao", "pop_censo2022"])
-        ibge_merge["renda_media"] = _metric_column(ibge_merge, ["renda_media", "renda", "renda_per_capita"])
-        ibge_merge["educacao_indice"] = _metric_column(ibge_merge, ["educacao_indice", "indice_educacao", "ideb"])
+        ibge_merge = _enrich_ibge_metrics(ibge_merge)
     mart_potencial = base_metrics.merge(
-        ibge_merge[["municipio_id_ibge7", "pop_total", "renda_media", "educacao_indice"]] if not ibge_merge.empty else pd.DataFrame(columns=["municipio_id_ibge7", "pop_total", "renda_media", "educacao_indice"]),
+        ibge_merge[
+            [
+                "municipio_id_ibge7",
+                "pop_total",
+                "densidade_demografica",
+                "renda_media",
+                "educacao_indice",
+                "urbanizacao_pct",
+                "idade_mediana",
+                "acesso_internet_pct",
+                "estrutura_urbana_indice",
+                "ruralidade_pct",
+            ]
+        ]
+        if not ibge_merge.empty
+        else pd.DataFrame(
+            columns=[
+                "municipio_id_ibge7",
+                "pop_total",
+                "densidade_demografica",
+                "renda_media",
+                "educacao_indice",
+                "urbanizacao_pct",
+                "idade_mediana",
+                "acesso_internet_pct",
+                "estrutura_urbana_indice",
+                "ruralidade_pct",
+            ]
+        ),
         on="municipio_id_ibge7",
         how="left",
     )
     mart_potencial["pop_norm"] = _normalize_metric(mart_potencial.fillna({"pop_total": 0.0}), "pop_total")
     mart_potencial["renda_norm"] = _normalize_metric(mart_potencial.fillna({"renda_media": 0.0}), "renda_media")
     mart_potencial["educacao_norm"] = _normalize_metric(mart_potencial.fillna({"educacao_indice": 0.0}), "educacao_indice")
+    mart_potencial["internet_norm"] = _normalize_metric(mart_potencial.fillna({"acesso_internet_pct": 0.0}), "acesso_internet_pct")
+    mart_potencial["urbanizacao_norm"] = _normalize_metric(mart_potencial.fillna({"urbanizacao_pct": 0.0}), "urbanizacao_pct")
     mart_potencial["potencial_eleitoral_ajustado_social"] = (
         pd.to_numeric(mart_potencial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-        * (0.4 * mart_potencial["pop_norm"] + 0.3 * mart_potencial["renda_norm"] + 0.3 * mart_potencial["educacao_norm"] + 1.0)
+        * (
+            0.30 * mart_potencial["pop_norm"]
+            + 0.20 * mart_potencial["renda_norm"]
+            + 0.20 * mart_potencial["educacao_norm"]
+            + 0.15 * mart_potencial["internet_norm"]
+            + 0.15 * mart_potencial["urbanizacao_norm"]
+            + 1.0
+        )
     )
     mart_potencial["janela_anos"] = ",".join(str(y) for y in sorted(years_selected)) if years_selected else ""
 
     seade_merge = silver_seade.copy()
     if not seade_merge.empty:
-        seade_merge["ipvs"] = _metric_column(seade_merge, ["ipvs", "indice_ipvs"])
-        seade_merge["emprego"] = _metric_column(seade_merge, ["emprego", "taxa_emprego", "emprego_formal"])
-        seade_merge["saude"] = _metric_column(seade_merge, ["saude", "indice_saude", "cobertura_saude"])
+        seade_merge = _enrich_seade_metrics(seade_merge)
     mart_territorial = base_metrics.merge(
-        seade_merge[["municipio_id_ibge7", "ipvs", "emprego", "saude"]] if not seade_merge.empty else pd.DataFrame(columns=["municipio_id_ibge7", "ipvs", "emprego", "saude"]),
+        seade_merge[
+            [
+                "municipio_id_ibge7",
+                "ipvs",
+                "emprego_formal",
+                "urbanizacao_pct",
+                "acesso_internet_pct",
+                "estrutura_urbana_indice",
+                "ruralidade_pct",
+                "saude",
+            ]
+        ]
+        if not seade_merge.empty
+        else pd.DataFrame(
+            columns=[
+                "municipio_id_ibge7",
+                "ipvs",
+                "emprego_formal",
+                "urbanizacao_pct",
+                "acesso_internet_pct",
+                "estrutura_urbana_indice",
+                "ruralidade_pct",
+                "saude",
+            ]
+        ),
         on="municipio_id_ibge7",
         how="left",
     )
+    mart_territorial["emprego"] = mart_territorial.get("emprego_formal", 0.0)
     mart_territorial["ipvs_norm"] = _normalize_metric(mart_territorial.fillna({"ipvs": 0.0}), "ipvs")
     mart_territorial["emprego_norm"] = _normalize_metric(mart_territorial.fillna({"emprego": 0.0}), "emprego")
     mart_territorial["saude_norm"] = _normalize_metric(mart_territorial.fillna({"saude": 0.0}), "saude")
+    mart_territorial["estrutura_urbana_norm"] = _normalize_metric(
+        mart_territorial.fillna({"estrutura_urbana_indice": 0.0}),
+        "estrutura_urbana_indice",
+    )
+    mart_territorial["ruralidade_norm"] = _normalize_metric(
+        mart_territorial.fillna({"ruralidade_pct": 0.0}),
+        "ruralidade_pct",
+    )
     mart_territorial["score_priorizacao_territorial_sp"] = (
         pd.to_numeric(mart_territorial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
         * (0.45 * mart_territorial["ipvs_norm"] + 0.30 * mart_territorial["emprego_norm"] + 0.25 * mart_territorial["saude_norm"] + 1.0)
     )
+    custo_mobilizacao = (
+        0.30 * (1.0 - mart_territorial["estrutura_urbana_norm"])
+        + 0.25 * mart_territorial["ruralidade_norm"]
+        + 0.20 * (1.0 - _normalize_metric(mart_territorial.fillna({"acesso_internet_pct": 0.0}), "acesso_internet_pct"))
+        + 0.15 * (1.0 - _normalize_metric(mart_territorial.fillna({"urbanizacao_pct": 0.0}), "urbanizacao_pct"))
+        + 0.10 * (1.0 - mart_territorial["emprego_norm"])
+    )
     mart_territorial["janela_anos"] = ",".join(str(y) for y in sorted(years_selected)) if years_selected else ""
+
+    mart_custo_mobilizacao = mart_territorial[
+        [
+            "municipio_id_ibge7",
+            "ranking_medio_3ciclos",
+            "indice_medio_3ciclos",
+            "anos_observados",
+            "emprego_formal",
+            "urbanizacao_pct",
+            "acesso_internet_pct",
+            "estrutura_urbana_indice",
+            "ruralidade_pct",
+            "estrutura_urbana_norm",
+            "ruralidade_norm",
+            "emprego_norm",
+        ]
+    ].copy()
+    mart_custo_mobilizacao["custo_mobilizacao_relativo"] = custo_mobilizacao
+    mart_custo_mobilizacao["janela_anos"] = mart_territorial["janela_anos"]
 
     fiscal = silver_fiscal.copy()
     if not fiscal.empty:
@@ -522,6 +922,7 @@ def _build_gold_marts(
         "mart_contexto_socioeconomico": mart_contexto,
         "mart_potencial_eleitoral_social": mart_potencial,
         "mart_priorizacao_territorial_sp": mart_territorial,
+        "mart_custo_mobilizacao": mart_custo_mobilizacao,
         "mart_sensibilidade_investimento_publico": mart_sensibilidade,
     }
 
@@ -772,7 +1173,7 @@ def _materialize_serving_layer(
     run_id: str,
     marts: dict[str, pd.DataFrame],
 ) -> dict[str, Any]:
-    serving_root = paths.data_root / "outputs" / "serving"
+    serving_root = paths.gold_serving_root
     serving_root.mkdir(parents=True, exist_ok=True)
     serving_db_path = serving_root / "serving.duckdb"
     stats_path = serving_root / f"serving_stats_{run_id}.json"
@@ -885,11 +1286,11 @@ def _materialize_serving_layer(
 
 def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_version: str = "medallion_v1") -> dict[str, Any]:
     run_id = _ts_now_compact()
-    run_dir = paths.data_root / "outputs" / "pipeline_runs" / pipeline_version / run_id
+    run_dir = paths.ingestion_root / "pipeline_runs" / pipeline_version / run_id
     bronze_dir = run_dir / "bronze"
     silver_dir = run_dir / "silver"
     gold_dir = run_dir / "gold"
-    lake_root = paths.data_root / "outputs" / "lake"
+    lake_root = paths.lake_root
     lake_bronze_root = lake_root / "bronze"
     lake_silver_root = lake_root / "silver"
     lake_gold_root = lake_root / "gold"
@@ -972,16 +1373,28 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
     )
 
     dim_municipio, dim_alias = _build_dim_municipio(inputs.mapping_csv_path)
+    dim_territorio = _build_dim_territorio(inputs.mapping_csv_path, dim_municipio, dim_alias, secao_df, inputs)
     silver_fato_municipio = _build_silver_fato_municipio(base_df, dim_alias, dim_municipio, inputs)
+    review_queue_df = silver_fato_municipio.attrs.get("review_queue_df", pd.DataFrame())
+    silver_fato_municipio.attrs = {}
     silver_fato_secao = _build_silver_fato_secao(secao_df, dim_alias, inputs)
     silver_socio = _build_silver_socio(socio_df)
     silver_ibge = _build_silver_context_df(ibge_df, ["codigo_ibge", "cod_ibge", "id_municipio_ibge"])
     silver_seade = _build_silver_context_df(seade_df, ["codigo_ibge", "cod_ibge", "id_municipio_ibge"])
     silver_fiscal = _build_silver_context_df(fiscal_df, ["codigo_ibge", "cod_ibge", "id_municipio_ibge"])
+    dim_tempo = _build_dim_tempo(
+        silver_municipio=silver_fato_municipio,
+        silver_secao=silver_fato_secao,
+        silver_fiscal=silver_fiscal,
+        inputs=inputs,
+    )
 
     silver_outputs = {
         "dim_municipio": dim_municipio,
         "dim_municipio_alias": dim_alias,
+        "dim_territorio": dim_territorio,
+        "dim_tempo": dim_tempo,
+        "manual_review_queue": review_queue_df,
         "fato_eleitoral_municipio": silver_fato_municipio,
         "fato_eleitoral_secao": silver_fato_secao,
         "dim_contexto_socioeconomico": silver_socio,
@@ -1012,9 +1425,11 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         silver_fiscal,
         inputs.window_cycles,
     )
+    gold_outputs["dim_territorio"] = dim_territorio.copy()
+    gold_outputs["dim_tempo"] = dim_tempo.copy()
     gold_paths: dict[str, str] = {}
     published_paths: dict[str, str] = {}
-    paths.pasta_est.mkdir(parents=True, exist_ok=True)
+    paths.gold_root.mkdir(parents=True, exist_ok=True)
     for name, df in gold_outputs.items():
         df_lgpd, _ = apply_lgpd_purpose_policy(
             df,
@@ -1033,7 +1448,7 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
             default_uf=inputs.uf,
         )
 
-        publish_path = paths.pasta_est / f"{name}_{run_id}.parquet"
+        publish_path = paths.gold_root / f"{name}_{run_id}.parquet"
         df_lgpd.to_parquet(publish_path, index=False)
         published_paths[name] = str(publish_path)
 
@@ -1062,22 +1477,41 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
     quality_metrics = {
         "join_success_pct": round(join_success * 100.0, 3),
         "null_critical_pct": round(null_critical * 100.0, 3),
+        "manual_review_rows": int(len(review_queue_df)),
         "update_delay_days": {k: round(v, 3) for k, v in update_delay.items()},
         "drift_score": round(float(drift.get("drift_score", 0.0)), 6),
         "drift_alert": bool(drift.get("drift_alert", 0.0) >= 1.0),
     }
+    dataset_manifests = {
+        name: build_load_manifest(
+            source_name=name,
+            collected_at_utc=datetime.now(UTC).isoformat(),
+            dataset_path=Path(path),
+            df=gold_outputs[name],
+            parser_version=pipeline_version,
+            quality={
+                "status": "ok",
+                "rows": int(len(gold_outputs[name])),
+                "join_success_pct": quality_metrics["join_success_pct"],
+                "null_critical_pct": quality_metrics["null_critical_pct"],
+                "drift_score": quality_metrics["drift_score"],
+            },
+        )
+        for name, path in published_paths.items()
+    }
 
     settings = get_settings()
     retention_result = {
-        "pipeline_runs": enforce_retention_policy(paths.data_root / "outputs" / "pipeline_runs", retention_days=settings.retention_days),
-        "lake": enforce_retention_policy(paths.data_root / "outputs" / "lake", retention_days=settings.retention_days),
-        "serving": enforce_retention_policy(paths.data_root / "outputs" / "serving", retention_days=settings.retention_days),
+        "pipeline_runs": enforce_retention_policy(paths.ingestion_root / "pipeline_runs", retention_days=settings.retention_days),
+        "lake": enforce_retention_policy(paths.lake_root, retention_days=settings.retention_days),
+        "serving": enforce_retention_policy(paths.gold_serving_root, retention_days=settings.retention_days),
     }
 
     manifest = {
         "pipeline_version": pipeline_version,
         "run_id": run_id,
         "created_at_utc": datetime.now(UTC).isoformat(),
+        "dataset_manifests": dataset_manifests,
         "layers": {
             "bronze": {
                 "assets": bronze_assets,
@@ -1097,6 +1531,22 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
             "serving": serving_refs,
             "contracts": contract_report,
             "quality_metrics": quality_metrics,
+            "matching": {
+                "layers": [
+                    "exact_code",
+                    "exact_name",
+                    "historical_alias",
+                    "fuzzy_score",
+                    "manual_review",
+                ],
+                "contract_fields": [
+                    "join_status",
+                    "join_method",
+                    "join_confidence",
+                    "needs_review",
+                ],
+                "manual_review_rows": int(len(review_queue_df)),
+            },
             "lgpd": {
                 "policy": "minimization_by_purpose + anonymization_if_pii + retention_policy",
                 "retention_days": int(settings.retention_days),
@@ -1112,3 +1562,4 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         "published": published_paths,
         "serving": serving_refs,
     }
+

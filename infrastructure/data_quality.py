@@ -70,7 +70,7 @@ def compute_drift_score(
 
 
 def find_previous_dataset_path(paths, dataset_name: str, current_run_id: str) -> Path | None:
-    latest_file = paths.data_root / "outputs" / "catalog" / "datasets_catalog.jsonl"
+    latest_file = paths.catalog_root / "datasets_catalog.jsonl"
     if not latest_file.exists():
         return None
     lines = [ln for ln in latest_file.read_text(encoding="utf-8").splitlines() if ln.strip()]

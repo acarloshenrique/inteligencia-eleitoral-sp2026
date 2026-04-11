@@ -14,13 +14,31 @@ AppEnv = Literal["dev", "staging", "prod"]
 @dataclass(frozen=True)
 class AppPaths:
     data_root: Path
-    pasta_est: Path
-    pasta_rel: Path
+    ingestion_root: Path
+    lake_root: Path
+    bronze_root: Path
+    silver_root: Path
+    gold_root: Path
+    gold_reports_root: Path
+    gold_serving_root: Path
+    catalog_root: Path
     chromadb_path: Path
-    runtime_rel: Path
+    runtime_reports_root: Path
     ts: str
     metadata_db_path: Path
     artifact_root: Path
+
+    @property
+    def pasta_est(self) -> Path:
+        return self.gold_root
+
+    @property
+    def pasta_rel(self) -> Path:
+        return self.gold_reports_root
+
+    @property
+    def runtime_rel(self) -> Path:
+        return self.runtime_reports_root
 
 
 class Settings(BaseSettings):
@@ -39,6 +57,7 @@ class Settings(BaseSettings):
     metadata_db_path: str | None = Field(default=None, alias="METADATA_DB_PATH")
     artifact_backend: str = Field(default="local", alias="ARTIFACT_BACKEND")
     artifact_local_root: str | None = Field(default=None, alias="ARTIFACT_LOCAL_ROOT")
+    ingestion_source_catalog_path: str | None = Field(default=None, alias="INGESTION_SOURCE_CATALOG_PATH")
     s3_endpoint_url: str = Field(default="", alias="S3_ENDPOINT_URL")
     s3_bucket: str = Field(default="", alias="S3_BUCKET")
     s3_access_key: str = Field(default="", alias="S3_ACCESS_KEY")
@@ -65,7 +84,7 @@ class Settings(BaseSettings):
     def resolved_data_root(self):
         if self.data_root:
             return Path(self.data_root).resolve()
-        candidatos = [Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")]
+        candidatos = [Path("."), Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")]
         for p in candidatos:
             if p.exists():
                 return p.resolve()
@@ -73,12 +92,20 @@ class Settings(BaseSettings):
 
     def build_paths(self):
         data_root = self.resolved_data_root()
+        lake_root = data_root / "lake"
+        gold_root = lake_root / "gold"
         return AppPaths(
             data_root=data_root,
-            pasta_est=data_root / "outputs" / "estado_sessao",
-            pasta_rel=data_root / "outputs" / "relatorios",
+            ingestion_root=data_root / "ingestion",
+            lake_root=lake_root,
+            bronze_root=lake_root / "bronze",
+            silver_root=lake_root / "silver",
+            gold_root=gold_root,
+            gold_reports_root=gold_root / "reports",
+            gold_serving_root=gold_root / "serving",
+            catalog_root=gold_root / "_catalog",
             chromadb_path=data_root / "chromadb",
-            runtime_rel=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "relatorios",
+            runtime_reports_root=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "gold_reports",
             ts=self.df_mun_ts,
             metadata_db_path=(
                 Path(self.metadata_db_path).resolve()

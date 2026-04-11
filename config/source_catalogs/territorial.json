@@ -1,0 +1,14 @@
+{
+  "domain": "territorial",
+  "label": "Territorial",
+  "sources": [
+    {
+      "name": "seade_ipvs_emprego_saude",
+      "role": "seade_csv",
+      "url": "https://example.com/seade_ipvs_emprego_saude.csv",
+      "format": "csv",
+      "coverage": "ipvs, emprego formal e saude para priorizacao territorial em SP",
+      "priority": "A"
+    }
+  ]
+}

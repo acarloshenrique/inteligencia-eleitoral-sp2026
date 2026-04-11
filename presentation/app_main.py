@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 from pydantic import ValidationError
 
 from application.use_cases_layered import executar_alocacao, responder_pergunta
@@ -12,6 +12,7 @@ from presentation.ui import (
     render_sidebar,
     render_tab_alocacao,
     render_tab_chat,
+    render_tab_mobilizacao,
     render_tab_ranking,
     render_tab_secoes,
 )
@@ -19,8 +20,8 @@ from presentation.ui import (
 
 def run_app():
     st.set_page_config(
-        page_title="Inteligência Eleitoral SP 2026",
-        page_icon="🗳",
+        page_title="Inteligencia Eleitoral SP 2026",
+        page_icon="IE",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -28,7 +29,7 @@ def run_app():
     try:
         get_settings()
     except ValidationError as e:
-        st.error(f"Falha na validação de configuração: {e}")
+        st.error(f"Falha na validacao de configuracao: {e}")
         st.stop()
 
     paths = build_paths()
@@ -51,14 +52,20 @@ def run_app():
                 st.session_state["aloc"] = df_aloc
                 st.session_state["budget"] = budget
             total = df_aloc["budget"].sum() if "budget" in df_aloc.columns else 0
-            st.success(f"✓ R$ {total:,.0f} alocados em {len(df_aloc)} municípios")
+            st.success(f"R$ {total:,.0f} alocados em {len(df_aloc)} municipios")
 
         except DataContractError as e:
             st.error(f"Contrato de dados violado: {e}")
         except AppError as e:
             st.error(e.to_operational_message())
 
-    t1, t2, t3, t4 = st.tabs(["💬 Analista", "📊 Alocação", "📍 Seções de Campo", "🏆 Ranking"])
+    t1, t2, t3, t4, t5 = st.tabs([
+        "Analista",
+        "Alocacao",
+        "Secoes de Campo",
+        "Mobilizacao",
+        "Ranking",
+    ])
 
     with t1:
         def _responder(pergunta, hist):
@@ -73,4 +80,6 @@ def run_app():
     with t3:
         render_tab_secoes(repo)
     with t4:
+        render_tab_mobilizacao(repo)
+    with t5:
         render_tab_ranking(df_mun)

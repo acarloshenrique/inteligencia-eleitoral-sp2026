@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from config.settings import get_settings
+from infrastructure.automated_ingestion import run_automated_ingestion
 from infrastructure.medallion_pipeline import MedallionInputs, run_medallion_pipeline
 
 
@@ -21,15 +22,30 @@ def _resolve_default_base(paths) -> Path:
     return candidates[0]
 
 
+def _resolve_latest_asset(paths, name: str, *, required: bool) -> Path | None:
+    bronze_candidates = sorted(paths.bronze_root.rglob(f"{name}.*"), reverse=True)
+    if bronze_candidates:
+        return bronze_candidates[0]
+    download_candidates = sorted((paths.ingestion_root / "downloads").rglob(f"{name}.*"), reverse=True)
+    if download_candidates:
+        return download_candidates[0]
+    if required:
+        raise FileNotFoundError(
+            f"asset '{name}' nao encontrado em {paths.bronze_root} ou {paths.ingestion_root / 'downloads'}"
+        )
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Executa pipeline Bronze/Silver/Gold para dados eleitorais e contexto.")
     parser.add_argument("--base-parquet", default="", help="Parquet base eleitoral.")
-    parser.add_argument("--mapping-csv", default="", help="CSV de correspondencia TSE/IBGE.")
-    parser.add_argument("--socio-csv", default="", help="CSV socioeconomico opcional.")
-    parser.add_argument("--secao-csv", default="", help="CSV de resultados por secao opcional.")
-    parser.add_argument("--ibge-csv", default="", help="CSV de indicadores IBGE (pop/renda/educacao).")
-    parser.add_argument("--seade-csv", default="", help="CSV de indicadores SEADE (IPVS/emprego/saude).")
-    parser.add_argument("--fiscal-csv", default="", help="CSV de transferencias/emendas por municipio.")
+    parser.add_argument("--source-catalog", default="", help="Catalogo JSON opcional para ingestao automatizada completa.")
+    parser.add_argument("--mapping-csv", default="", help="CSV de correspondencia TSE/IBGE. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument("--socio-csv", default="", help="CSV socioeconomico opcional. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument("--secao-csv", default="", help="CSV de resultados por secao opcional. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument("--ibge-csv", default="", help="CSV de indicadores IBGE. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument("--seade-csv", default="", help="CSV de indicadores SEADE. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument("--fiscal-csv", default="", help="CSV de transferencias/emendas por municipio. Quando omitido, resolve do bronze/downloads.")
     parser.add_argument("--ano", type=int, default=None, help="Ano de referencia.")
     parser.add_argument("--mes", type=int, default=None, help="Mes de referencia.")
     parser.add_argument("--turno", type=int, default=None, help="Turno eleitoral.")
@@ -40,29 +56,41 @@ def main() -> int:
 
     settings = get_settings()
     paths = settings.build_paths()
-    open_data_root = paths.data_root / "open_data" / "raw"
+    catalog_raw = args.source_catalog or settings.ingestion_source_catalog_path
+    if catalog_raw:
+        result = run_automated_ingestion(
+            paths=paths,
+            catalog_path=Path(catalog_raw).resolve(),
+            pipeline="medallion",
+            pipeline_version=args.pipeline_version,
+        )
+        print("Ingestao automatizada medallion executada com sucesso")
+        print(f"run_id={result['run_id']}")
+        print(f"manifest={result['manifest_path']}")
+        print(f"promotion_manifest={result['promotion_result']['manifest_path']}")
+        return 0
 
     base_path = Path(args.base_parquet).resolve() if args.base_parquet else _resolve_default_base(paths)
     mapping_path = (
         Path(args.mapping_csv).resolve()
         if args.mapping_csv
-        else (open_data_root / "municipios_tse_ibge.csv").resolve()
+        else _resolve_latest_asset(paths, "municipios_tse_ibge", required=True)
     )
-    socio_path = Path(args.socio_csv).resolve() if args.socio_csv else (open_data_root / "indicadores_municipais.csv").resolve()
-    secao_path = Path(args.secao_csv).resolve() if args.secao_csv else (open_data_root / "resultados_secao.csv").resolve()
-    ibge_path = Path(args.ibge_csv).resolve() if args.ibge_csv else (open_data_root / "ibge_pop_renda_educacao.csv").resolve()
-    seade_path = Path(args.seade_csv).resolve() if args.seade_csv else (open_data_root / "seade_ipvs_emprego_saude.csv").resolve()
-    fiscal_path = Path(args.fiscal_csv).resolve() if args.fiscal_csv else (open_data_root / "transparencia_transferencias_emendas.csv").resolve()
+    socio_path = Path(args.socio_csv).resolve() if args.socio_csv else _resolve_latest_asset(paths, "indicadores_municipais", required=False)
+    secao_path = Path(args.secao_csv).resolve() if args.secao_csv else _resolve_latest_asset(paths, "resultados_secao", required=False)
+    ibge_path = Path(args.ibge_csv).resolve() if args.ibge_csv else _resolve_latest_asset(paths, "ibge_pop_renda_educacao", required=False)
+    seade_path = Path(args.seade_csv).resolve() if args.seade_csv else _resolve_latest_asset(paths, "seade_ipvs_emprego_saude", required=False)
+    fiscal_path = Path(args.fiscal_csv).resolve() if args.fiscal_csv else _resolve_latest_asset(paths, "transparencia_transferencias_emendas", required=False)
 
-    if not socio_path.exists():
+    if socio_path is not None and not socio_path.exists():
         socio_path = None
-    if not secao_path.exists():
+    if secao_path is not None and not secao_path.exists():
         secao_path = None
-    if not ibge_path.exists():
+    if ibge_path is not None and not ibge_path.exists():
         ibge_path = None
-    if not seade_path.exists():
+    if seade_path is not None and not seade_path.exists():
         seade_path = None
-    if not fiscal_path.exists():
+    if fiscal_path is not None and not fiscal_path.exists():
         fiscal_path = None
 
     result = run_medallion_pipeline(

@@ -62,7 +62,8 @@ Scripts:
 
 ```bash
 python scripts/sync_open_data_assets.py --asset "nome|url|arquivo.csv"
-python scripts/run_open_data_crosswalk.py --mapping-csv data/open_data/raw/municipios_tse_ibge.csv
+python scripts/run_open_data_crosswalk.py --source-catalog config/ingestion_sources.example.json
+python scripts/run_automated_ingestion.py --source-catalog config/ingestion_sources.example.json
 ```
 
 Detalhes: `docs/open-data-crosswalk.md`
@@ -122,7 +123,39 @@ python -m piptools compile --resolver=backtracking --output-file requirements.tx
 ## Dados
 
 Os dados de eleitores e votação (parquets) não são versionados no Git por questões de privacidade.
-Para rodar localmente, copie os parquets do Google Drive para a pasta `data/`.
+O fluxo recomendado agora é ingestão automatizada por catálogo de fontes remotas, sem cópia manual de Google Drive:
+
+```bash
+python scripts/run_automated_ingestion.py --source-catalog config/ingestion_sources.example.json
+```
+
+Catálogo de fontes por domínio:
+
+- `eleitoral_oficial`
+- `socioeconomico`
+- `territorial`
+- `midia_e_social`
+- `operacoes_de_campanha`
+
+Referências:
+
+- `config/source_domains.json`
+- `config/source_catalogs/`
+- `config/ingestion_tse_prioritario.example.json`
+- `config/ingestion_socioeconomico_sp.example.json`
+
+Também há job assíncrono na API:
+
+- `POST /v1/jobs/ingest`
+- `workers.tasks.run_ingestion_task`
+
+Fluxo operacional:
+
+- `ingestion/`: download automatizado, validação e versionamento de cargas
+- `lake/bronze/`: dado cru, como veio da fonte
+- `lake/silver/`: schema, tipos, datas, chaves e encoding normalizados
+- `lake/gold/`: tabelas prontas para decisão, score, API e dashboard
+- `api/`, `workers/` e `presentation/`: consumo exclusivo da camada `gold`
 
 ## Estrutura
 
@@ -132,13 +165,14 @@ Para rodar localmente, copie os parquets do Google Drive para a pasta `data/`.
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
-├── data/
-│   ├── outputs/
-│   │   ├── estado_sessao/  # df_mun, df_sp_capital (parquets)
-│   │   └── relatorios/     # última alocação, seções, mapa tático
-│   └── chromadb/           # índice vetorial 644 municípios
+├── ingestion/              # downloads, validação e runs de ingestão
+├── lake/
+│   ├── bronze/             # dado cru vindo das fontes
+│   ├── silver/             # schema padronizado e chaves canônicas
+│   └── gold/               # marts, serving, reports e catálogo
+├── chromadb/               # índice vetorial 644 municípios
 ├── scripts/
-│   └── prepare_data.py     # Copia dados do Drive para data/
+│   └── run_automated_ingestion.py
 └── tests/
     └── test_modelo.py      # Testes dos componentes do score
 ```

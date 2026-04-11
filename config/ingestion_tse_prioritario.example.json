@@ -1,0 +1,115 @@
+{
+  "pipeline": "medallion",
+  "pipeline_version": "medallion_tse_v1",
+  "domains": [
+    {
+      "domain": "eleitoral_oficial",
+      "assets": [
+        {
+          "name": "base_eleitoral_remoto",
+          "role": "base_parquet",
+          "url": "https://example.com/df_mun_latest.parquet",
+          "file_name": "df_mun_latest.parquet",
+          "format": "parquet",
+          "required": true
+        },
+        {
+          "name": "mapping_tse_ibge",
+          "role": "mapping_csv",
+          "url": "https://example.com/municipios_tse_ibge.csv",
+          "file_name": "municipios_tse_ibge.csv",
+          "format": "csv",
+          "required": true
+        },
+        {
+          "name": "tse_eleitorado_municipio",
+          "role": "eleitorado_municipio_csv",
+          "url": "https://example.com/tse_eleitorado_municipio.csv",
+          "file_name": "tse_eleitorado_municipio.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_eleitorado_zona",
+          "role": "eleitorado_zona_csv",
+          "url": "https://example.com/tse_eleitorado_zona.csv",
+          "file_name": "tse_eleitorado_zona.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_eleitorado_secao",
+          "role": "eleitorado_secao_csv",
+          "url": "https://example.com/tse_eleitorado_secao.csv",
+          "file_name": "tse_eleitorado_secao.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_resultados_historicos_municipio",
+          "role": "resultado_municipio_csv",
+          "url": "https://example.com/tse_resultados_historicos_municipio.csv",
+          "file_name": "tse_resultados_historicos_municipio.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_resultados_historicos_zona",
+          "role": "resultado_zona_csv",
+          "url": "https://example.com/tse_resultados_historicos_zona.csv",
+          "file_name": "tse_resultados_historicos_zona.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_resultados_historicos_secao",
+          "role": "secao_csv",
+          "url": "https://example.com/tse_resultados_historicos_secao.csv",
+          "file_name": "tse_resultados_historicos_secao.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_candidaturas",
+          "role": "candidaturas_csv",
+          "url": "https://example.com/tse_candidaturas.csv",
+          "file_name": "tse_candidaturas.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_prestacao_contas",
+          "role": "prestacao_contas_csv",
+          "url": "https://example.com/tse_prestacao_contas.csv",
+          "file_name": "tse_prestacao_contas.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_pesquisas_eleitorais",
+          "role": "pesquisas_eleitorais_csv",
+          "url": "https://example.com/tse_pesquisas_eleitorais.csv",
+          "file_name": "tse_pesquisas_eleitorais.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_comparecimento_abstencao",
+          "role": "comparecimento_abstencao_csv",
+          "url": "https://example.com/tse_comparecimento_abstencao.csv",
+          "file_name": "tse_comparecimento_abstencao.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_partidos_coligacoes_federacoes",
+          "role": "partidos_coligacoes_federacoes_csv",
+          "url": "https://example.com/tse_partidos_coligacoes_federacoes.csv",
+          "file_name": "tse_partidos_coligacoes_federacoes.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

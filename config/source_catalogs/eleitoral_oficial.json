@@ -1,0 +1,123 @@
+{
+  "domain": "eleitoral_oficial",
+  "label": "Eleitoral Oficial",
+  "sources": [
+    {
+      "name": "tse_eleitorado_municipio",
+      "role": "eleitorado_municipio_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "municipio",
+      "coverage": "eleitorado por municipio",
+      "priority": "A"
+    },
+    {
+      "name": "tse_eleitorado_zona",
+      "role": "eleitorado_zona_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "zona",
+      "coverage": "eleitorado por zona",
+      "priority": "A"
+    },
+    {
+      "name": "tse_eleitorado_secao",
+      "role": "eleitorado_secao_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "secao",
+      "coverage": "eleitorado por secao",
+      "priority": "A"
+    },
+    {
+      "name": "tse_resultados_historicos_municipio",
+      "role": "resultado_municipio_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "municipio",
+      "coverage": "resultados historicos por municipio",
+      "priority": "A"
+    },
+    {
+      "name": "tse_resultados_historicos_zona",
+      "role": "resultado_zona_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "zona",
+      "coverage": "resultados historicos por zona",
+      "priority": "A"
+    },
+    {
+      "name": "tse_resultados_historicos_secao",
+      "role": "secao_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "secao",
+      "coverage": "resultados historicos por secao",
+      "priority": "A"
+    },
+    {
+      "name": "tse_candidaturas",
+      "role": "candidaturas_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "candidatura",
+      "coverage": "candidaturas",
+      "priority": "A"
+    },
+    {
+      "name": "tse_prestacao_contas",
+      "role": "prestacao_contas_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "candidatura",
+      "coverage": "prestacoes de contas",
+      "priority": "A"
+    },
+    {
+      "name": "tse_pesquisas_eleitorais",
+      "role": "pesquisas_eleitorais_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "pesquisa",
+      "coverage": "pesquisas eleitorais quando disponiveis",
+      "priority": "A"
+    },
+    {
+      "name": "tse_comparecimento_abstencao",
+      "role": "comparecimento_abstencao_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "secao",
+      "coverage": "comparecimento e abstencao",
+      "priority": "A"
+    },
+    {
+      "name": "tse_partidos_coligacoes_federacoes",
+      "role": "partidos_coligacoes_federacoes_csv",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "format": "csv",
+      "granularidade": "organizacao_partidaria",
+      "coverage": "partidos, coligacoes e federacoes",
+      "priority": "A"
+    },
+    {
+      "name": "base_eleitoral_remoto",
+      "role": "base_parquet",
+      "url": "https://example.com/df_mun_latest.parquet",
+      "format": "parquet",
+      "granularidade": "municipio",
+      "coverage": "base consolidada de score eleitoral",
+      "priority": "A"
+    },
+    {
+      "name": "mapping_tse_ibge",
+      "role": "mapping_csv",
+      "url": "https://example.com/municipios_tse_ibge.csv",
+      "format": "csv",
+      "granularidade": "municipio",
+      "coverage": "chaves oficiais TSE/IBGE",
+      "priority": "A"
+    }
+  ]
+}

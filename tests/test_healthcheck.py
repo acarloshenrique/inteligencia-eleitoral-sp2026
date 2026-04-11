@@ -20,7 +20,7 @@ def test_env_bool_variants(monkeypatch):
 
 def test_find_df_mun_prefers_fixed_timestamp(tmp_path):
     base = tmp_path
-    estado = base / "outputs" / "estado_sessao"
+    estado = base / "lake" / "gold"
     estado.mkdir(parents=True, exist_ok=True)
     fixed = estado / "df_mun_20260316_1855.parquet"
     newer = estado / "df_mun_20260401_1010.parquet"

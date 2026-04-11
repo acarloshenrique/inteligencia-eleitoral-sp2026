@@ -40,12 +40,15 @@ def validate_municipio_enriched(df: pd.DataFrame) -> pd.DataFrame:
         "turno",
         "canonical_key",
         "join_status",
+        "join_method",
+        "join_confidence",
+        "needs_review",
     ]
     missing = _missing_columns(df, required)
     if missing:
         raise OpenDataContractError(f"dataset enriquecido invalido: colunas ausentes {missing}")
 
-    allowed_status = {"matched", "no_match"}
+    allowed_status = {"matched", "no_match", "manual_review"}
     status_values = {str(v) for v in df["join_status"].dropna().unique().tolist()}
     if not status_values.issubset(allowed_status):
         raise OpenDataContractError("dataset enriquecido invalido: join_status fora do padrao")
@@ -62,6 +65,10 @@ def validate_silver_fato_municipio(df: pd.DataFrame) -> pd.DataFrame:
         "canonical_key",
         "municipio",
         "ranking_final",
+        "join_status",
+        "join_method",
+        "join_confidence",
+        "needs_review",
     ]
     missing = _missing_columns(df, required)
     if missing:
@@ -73,6 +80,63 @@ def validate_silver_fato_municipio(df: pd.DataFrame) -> pd.DataFrame:
 
 def validate_silver_dim_municipio(df: pd.DataFrame) -> pd.DataFrame:
     return validate_municipio_dimension(df)
+
+
+def validate_silver_dim_territorio(df: pd.DataFrame) -> pd.DataFrame:
+    required = [
+        "territorio_id",
+        "cod_tse_municipio",
+        "cod_ibge_municipio",
+        "uf",
+        "nome_padronizado",
+        "zona_eleitoral",
+        "secao_eleitoral",
+        "latitude",
+        "longitude",
+        "geohash",
+        "vigencia_inicio",
+        "vigencia_fim",
+    ]
+    missing = _missing_columns(df, required)
+    if missing:
+        raise OpenDataContractError(f"silver.dim_territorio invalido: colunas ausentes {missing}")
+    if df.empty:
+        raise OpenDataContractError("silver.dim_territorio invalido: dataset vazio")
+    territorio_id = df["territorio_id"].astype(str).str.strip()
+    if (territorio_id == "").any():
+        raise OpenDataContractError("silver.dim_territorio invalido: territorio_id vazio")
+    return df
+
+
+def validate_silver_dim_tempo(df: pd.DataFrame) -> pd.DataFrame:
+    required = [
+        "tempo_id",
+        "data",
+        "ano",
+        "mes",
+        "dia",
+        "semana_iso",
+        "dia_semana",
+        "ciclo_eleitoral",
+        "fase_calendario",
+        "is_historico_eleitoral",
+        "is_pre_campanha",
+        "is_janela_campanha",
+        "is_evento",
+        "evento",
+        "tipo_evento",
+        "pulso_midia",
+        "is_pulso_midia",
+    ]
+    missing = _missing_columns(df, required)
+    if missing:
+        raise OpenDataContractError(f"silver.dim_tempo invalida: colunas ausentes {missing}")
+    if df.empty:
+        raise OpenDataContractError("silver.dim_tempo invalida: dataset vazio")
+    tempo_id = df["tempo_id"].astype(str).str.strip()
+    if (tempo_id == "").any():
+        raise OpenDataContractError("silver.dim_tempo invalida: tempo_id vazio")
+    return df
 
 
 def validate_gold_mart_municipio_eleitoral(df: pd.DataFrame) -> pd.DataFrame:

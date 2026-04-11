@@ -1,0 +1,64 @@
+{
+  "pipeline": "medallion",
+  "pipeline_version": "medallion_socio_sp_v1",
+  "domains": [
+    {
+      "domain": "eleitoral_oficial",
+      "assets": [
+        {
+          "name": "base_eleitoral_remoto",
+          "role": "base_parquet",
+          "url": "https://example.com/df_mun_latest.parquet",
+          "file_name": "df_mun_latest.parquet",
+          "format": "parquet",
+          "required": true
+        },
+        {
+          "name": "mapping_tse_ibge",
+          "role": "mapping_csv",
+          "url": "https://example.com/municipios_tse_ibge.csv",
+          "file_name": "municipios_tse_ibge.csv",
+          "format": "csv",
+          "required": true
+        }
+      ]
+    },
+    {
+      "domain": "socioeconomico",
+      "assets": [
+        {
+          "name": "ibge_pop_renda_educacao_ampliado",
+          "role": "ibge_csv",
+          "url": "https://example.com/ibge_pop_renda_educacao_ampliado.csv",
+          "file_name": "ibge_pop_renda_educacao_ampliado.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "ibge_urbanizacao_idade_internet",
+          "role": "ibge_csv",
+          "url": "https://example.com/ibge_urbanizacao_idade_internet.csv",
+          "file_name": "ibge_urbanizacao_idade_internet.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "indicadores_socio",
+          "role": "socio_csv",
+          "url": "https://example.com/indicadores_municipais.csv",
+          "file_name": "indicadores_municipais.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "seade_contexto_sp",
+          "role": "seade_csv",
+          "url": "https://example.com/seade_contexto_sp.csv",
+          "file_name": "seade_contexto_sp.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

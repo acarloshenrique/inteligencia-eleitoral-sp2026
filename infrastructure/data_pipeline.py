@@ -14,6 +14,7 @@ from config.settings import AppPaths
 from domain.contracts import validate_municipios_input
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.env import df_municipios_vazio
+from infrastructure.load_manifest import build_load_manifest
 
 
 PIPELINE_VERSION = "v1"
@@ -151,12 +152,19 @@ def _node_publish(context: dict[str, Any]) -> dict[str, Any]:
     paths: AppPaths = context["paths"]
     run_id = str(context["run_id"])
 
-    paths.pasta_est.mkdir(parents=True, exist_ok=True)
+    paths.gold_root.mkdir(parents=True, exist_ok=True)
     publish_name = f"df_mun_{run_id}.parquet"
-    published_path = paths.pasta_est / publish_name
+    published_path = paths.gold_root / publish_name
 
     df = pd.read_parquet(transformed_path)
     df.to_parquet(published_path, index=False)
+    load_manifest = build_load_manifest(
+        source_name="df_municipios",
+        collected_at_utc=datetime.now(UTC).isoformat(),
+        dataset_path=published_path,
+        df=df,
+        parser_version=str(context["pipeline_version"]),
+    )
 
     latest_meta = {
         "pipeline_version": context["pipeline_version"],
@@ -166,7 +174,7 @@ def _node_publish(context: dict[str, Any]) -> dict[str, Any]:
         "sha256": _sha256_file(published_path),
         "published_at_utc": datetime.now(UTC).isoformat(),
     }
-    latest_path = paths.pasta_est / "df_mun_latest.json"
+    latest_path = paths.gold_root / "df_mun_latest.json"
     latest_path.write_text(json.dumps(latest_meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
     catalog_metadata = build_dataset_metadata(
@@ -184,12 +192,13 @@ def _node_publish(context: dict[str, Any]) -> dict[str, Any]:
         "dataset_metadata": catalog_metadata,
         "catalog_path": catalog_refs["catalog_path"],
         "catalog_latest_index_path": catalog_refs["latest_index_path"],
+        "load_manifest": load_manifest,
     }
 
 
 def run_versioned_data_pipeline(paths: AppPaths, input_path: Path, pipeline_version: str = PIPELINE_VERSION) -> dict[str, Any]:
     run_id = _ts_now_compact()
-    runs_root = paths.data_root / "outputs" / "pipeline_runs"
+    runs_root = paths.ingestion_root / "pipeline_runs"
     run_dir = runs_root / pipeline_version / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -219,6 +228,7 @@ def run_versioned_data_pipeline(paths: AppPaths, input_path: Path, pipeline_vers
         "dag_order": result["dag_order"],
         "started_at_utc": result["started_at_utc"],
         "finished_at_utc": result["finished_at_utc"],
+        "dataset_manifest": result["publish"]["load_manifest"],
         "steps": {
             "ingest": result["ingest"],
             "validate": result["validate"],
@@ -230,3 +240,4 @@ def run_versioned_data_pipeline(paths: AppPaths, input_path: Path, pipeline_vers
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     result["manifest_path"] = str(manifest_path)
     return result
+

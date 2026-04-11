@@ -16,22 +16,34 @@ from infrastructure.dataset_catalog import build_dataset_metadata, register_data
 def test_register_dataset_version_writes_catalog_and_latest_index():
     with tempfile.TemporaryDirectory() as tmp:
         data_root = Path(tmp)
-        pasta_est = data_root / "outputs" / "estado_sessao"
-        pasta_rel = data_root / "outputs" / "relatorios"
+        ingestion_root = data_root / "ingestion"
+        lake_root = data_root / "lake"
+        bronze_root = lake_root / "bronze"
+        silver_root = lake_root / "silver"
+        gold_root = lake_root / "gold"
+        gold_reports_root = gold_root / "reports"
+        gold_serving_root = gold_root / "serving"
+        catalog_root = gold_root / "_catalog"
         chroma = data_root / "chromadb"
-        runtime_rel = data_root / "runtime_rel"
-        for p in [pasta_est, pasta_rel, chroma, runtime_rel]:
+        runtime_reports_root = data_root / "runtime_rel"
+        for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
             p.mkdir(parents=True, exist_ok=True)
 
-        dataset_path = pasta_est / "df_mun_20260407_010101.parquet"
+        dataset_path = gold_root / "df_mun_20260407_010101.parquet"
         pd.DataFrame([{"ranking_final": 1, "municipio": "A"}]).to_parquet(dataset_path, index=False)
 
         paths = AppPaths(
             data_root=data_root,
-            pasta_est=pasta_est,
-            pasta_rel=pasta_rel,
+            ingestion_root=ingestion_root,
+            lake_root=lake_root,
+            bronze_root=bronze_root,
+            silver_root=silver_root,
+            gold_root=gold_root,
+            gold_reports_root=gold_reports_root,
+            gold_serving_root=gold_serving_root,
+            catalog_root=catalog_root,
             chromadb_path=chroma,
-            runtime_rel=runtime_rel,
+            runtime_reports_root=runtime_reports_root,
             ts="20260407_010101",
             metadata_db_path=data_root / "metadata" / "jobs.sqlite3",
             artifact_root=data_root / "artifacts",

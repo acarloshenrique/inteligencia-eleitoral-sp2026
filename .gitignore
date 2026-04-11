@@ -11,15 +11,21 @@ venv/
 .pytest_cache/
 pytest-cache-files-*/
 
-# Dados sensíveis — nunca commitar parquets com dados de eleitores
-data/outputs/estado_sessao/*.parquet
-data/outputs/relatorios/*.parquet
-data/outputs/relatorios/*.xlsx
+# Dados sensiveis - nunca commitar parquets com dados de eleitores
+ingestion/**/*.parquet
+ingestion/**/*.csv
+lake/bronze/**/*.parquet
+lake/bronze/**/*.csv
+lake/silver/**/*.parquet
+lake/silver/**/*.csv
+lake/gold/**/*.parquet
+lake/gold/**/*.csv
+lake/gold/**/*.xlsx
 data/cache_tse/*.parquet
 data/cache_tse/*.zip
 
-# ChromaDB — gerenciado via HF LFS ou volume externo
-# data/chromadb/   ← descomente para excluir do git
+# ChromaDB - gerenciado via HF LFS ou volume externo
+# data/chromadb/   <- descomente para excluir do git
 
 # Jupyter
 .ipynb_checkpoints/

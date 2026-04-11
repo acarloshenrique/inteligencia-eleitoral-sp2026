@@ -20,7 +20,7 @@ def resolve_data_root() -> Path:
     candidates = []
     if env_root:
         candidates.append(Path(env_root))
-    candidates.extend([Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")])
+    candidates.extend([Path("."), Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")])
     for p in candidates:
         if p.exists():
             return p.resolve()
@@ -28,14 +28,22 @@ def resolve_data_root() -> Path:
 
 
 def find_df_mun(base_dir: Path, ts: str) -> Path | None:
-    estado = base_dir / "outputs" / "estado_sessao"
-    if not estado.exists():
+    gold = base_dir / "lake" / "gold"
+    if not gold.exists():
         return None
-    fixed = estado / f"df_mun_{ts}.parquet"
-    if fixed.exists():
-        return fixed
-    files = sorted(estado.glob("df_mun_*.parquet"), reverse=True)
-    return files[0] if files else None
+    preferred = [
+        gold / f"mart_municipio_eleitoral_{ts}.parquet",
+        gold / f"df_mun_enriched_{ts}.parquet",
+        gold / f"df_mun_{ts}.parquet",
+    ]
+    for candidate in preferred:
+        if candidate.exists():
+            return candidate
+    for pattern in ["mart_municipio_eleitoral_*.parquet", "df_mun_enriched_*.parquet", "df_mun_*.parquet"]:
+        files = sorted(gold.glob(pattern), reverse=True)
+        if files:
+            return files[0]
+    return None
 
 
 def check_streamlit() -> tuple[bool, str]:
@@ -65,7 +73,7 @@ def check_readiness() -> tuple[bool, list[str]]:
     if env_bool("REQUIRE_GROQ_API_KEY", default=False) and not os.environ.get("GROQ_API_KEY"):
         messages.append("required GROQ_API_KEY is missing")
 
-    runtime_rel = Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "relatorios"
+    runtime_rel = Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "gold_reports"
     try:
         runtime_rel.mkdir(parents=True, exist_ok=True)
         probe = runtime_rel / ".ready_probe"

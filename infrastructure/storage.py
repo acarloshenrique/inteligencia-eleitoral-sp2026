@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def carrega_dados(paths):
     caminho = resolve_df_mun_path(paths)
     if caminho is None:
-        st.warning("Base de municípios não encontrada. Coloque os parquets em data/outputs/estado_sessao.")
+        st.warning("Base gold de municipios nao encontrada. Publique um parquet em lake/gold.")
         return df_municipios_vazio()
 
     df = pd.read_parquet(caminho)
@@ -22,7 +22,7 @@ def carrega_dados(paths):
         at, av = df["score_territorial_qt"] > 70, df["VS_qt"] > 70
         df["cluster"] = np.select(
             [at & av, ~at & av, at & ~av, ~at & ~av],
-            ["Diamante", "Alavanca", "Consolidação", "Descarte"],
+            ["Diamante", "Alavanca", "Consolidacao", "Descarte"],
             "Descarte",
         )
 
@@ -49,9 +49,17 @@ def carrega_db(paths, df_mun):
         if p.exists():
             db.register(nome, pd.read_parquet(str(p)))
             continue
-        found = sorted(paths.pasta_rel.glob(glob), reverse=True)
+        found = sorted(paths.gold_reports_root.glob(glob), reverse=True)
         if not found:
-            found = sorted(paths.runtime_rel.glob(glob), reverse=True)
+            found = sorted(paths.runtime_reports_root.glob(glob), reverse=True)
+        if found:
+            db.register(nome, pd.read_parquet(str(found[0])))
+    for nome, glob in [
+        ("mart_custo_mobilizacao", "mart_custo_mobilizacao_*.parquet"),
+        ("mart_priorizacao_territorial_sp", "mart_priorizacao_territorial_sp_*.parquet"),
+        ("dim_tempo", "dim_tempo_*.parquet"),
+    ]:
+        found = sorted(paths.gold_root.glob(glob), reverse=True)
         if found:
             db.register(nome, pd.read_parquet(str(found[0])))
     return db
@@ -69,5 +77,5 @@ def tem_tabela(db, tab):
             nomes = {str(n).lower() for n in tabelas.iloc[:, 0].tolist()}
         return tab.lower() in nomes
     except Exception as e:
-        logger.debug("Tabela/visão indisponível (%s): %s", tab, e)
+        logger.debug("Tabela/visao indisponivel (%s): %s", tab, e)
         return False

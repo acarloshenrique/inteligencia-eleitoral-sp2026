@@ -23,7 +23,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _catalog_paths(paths: AppPaths) -> tuple[Path, Path]:
-    catalog_dir = paths.data_root / "outputs" / "catalog"
+    catalog_dir = paths.catalog_root
     catalog_dir.mkdir(parents=True, exist_ok=True)
     return catalog_dir / "datasets_catalog.jsonl", catalog_dir / "datasets_latest.json"
 

@@ -1,0 +1,62 @@
+{
+  "domain": "socioeconomico",
+  "label": "Socioeconômico",
+  "sources": [
+    {
+      "name": "ibge_populacao_densidade_renda_escolaridade",
+      "role": "ibge_csv",
+      "url": "https://servicodados.ibge.gov.br/",
+      "format": "csv",
+      "coverage": "populacao, densidade, renda, escolaridade",
+      "priority": "A"
+    },
+    {
+      "name": "ibge_urbanizacao_idade_ruralidade",
+      "role": "ibge_csv",
+      "url": "https://apisidra.ibge.gov.br/",
+      "format": "csv",
+      "coverage": "urbanizacao, idade, ruralidade",
+      "priority": "A"
+    },
+    {
+      "name": "ibge_internet_estrutura_urbana",
+      "role": "ibge_csv",
+      "url": "https://apisidra.ibge.gov.br/",
+      "format": "csv",
+      "coverage": "acesso a internet e estrutura urbana",
+      "priority": "A"
+    },
+    {
+      "name": "indicadores_socio",
+      "role": "socio_csv",
+      "url": "https://example.com/indicadores_municipais.csv",
+      "format": "csv",
+      "coverage": "camada consolidada de apoio socioeconomico",
+      "priority": "A"
+    },
+    {
+      "name": "seade_emprego_formal_sp",
+      "role": "seade_csv",
+      "url": "https://repositorio.seade.gov.br/",
+      "format": "csv",
+      "coverage": "emprego formal em SP",
+      "priority": "A"
+    },
+    {
+      "name": "seade_urbanizacao_estrutura_sp",
+      "role": "seade_csv",
+      "url": "https://repositorio.seade.gov.br/",
+      "format": "csv",
+      "coverage": "estrutura urbana e urbanizacao em SP",
+      "priority": "A"
+    },
+    {
+      "name": "seade_internet_ruralidade_sp",
+      "role": "seade_csv",
+      "url": "https://repositorio.seade.gov.br/",
+      "format": "csv",
+      "coverage": "acesso a internet e ruralidade em SP",
+      "priority": "A"
+    }
+  ]
+}

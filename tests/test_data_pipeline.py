@@ -55,22 +55,34 @@ def test_simple_dag_detects_cycle():
 def test_data_pipeline_runs_all_steps_and_publishes_outputs():
     with tempfile.TemporaryDirectory() as tmp:
         data_root = Path(tmp)
-        pasta_est = data_root / "outputs" / "estado_sessao"
-        pasta_rel = data_root / "outputs" / "relatorios"
+        ingestion_root = data_root / "ingestion"
+        lake_root = data_root / "lake"
+        bronze_root = lake_root / "bronze"
+        silver_root = lake_root / "silver"
+        gold_root = lake_root / "gold"
+        gold_reports_root = gold_root / "reports"
+        gold_serving_root = gold_root / "serving"
+        catalog_root = gold_root / "_catalog"
         chroma = data_root / "chromadb"
-        runtime_rel = data_root / "runtime_rel"
-        for p in [pasta_est, pasta_rel, chroma, runtime_rel]:
+        runtime_reports_root = data_root / "runtime_rel"
+        for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
             p.mkdir(parents=True, exist_ok=True)
 
-        input_path = pasta_est / "df_mun_20260407_000000.parquet"
+        input_path = ingestion_root / "df_mun_20260407_000000.parquet"
         _sample_df().to_parquet(input_path, index=False)
 
         paths = AppPaths(
             data_root=data_root,
-            pasta_est=pasta_est,
-            pasta_rel=pasta_rel,
+            ingestion_root=ingestion_root,
+            lake_root=lake_root,
+            bronze_root=bronze_root,
+            silver_root=silver_root,
+            gold_root=gold_root,
+            gold_reports_root=gold_reports_root,
+            gold_serving_root=gold_serving_root,
+            catalog_root=catalog_root,
             chromadb_path=chroma,
-            runtime_rel=runtime_rel,
+            runtime_reports_root=runtime_reports_root,
             ts="20260407_000000",
             metadata_db_path=data_root / "metadata" / "jobs.sqlite3",
             artifact_root=data_root / "artifacts",
@@ -83,6 +95,14 @@ def test_data_pipeline_runs_all_steps_and_publishes_outputs():
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["pipeline_version"] == "vtest"
+        dataset_manifest = manifest["dataset_manifest"]
+        assert dataset_manifest["fonte"] == "df_municipios"
+        assert dataset_manifest["hash_arquivo"]
+        assert "ranking_final" in dataset_manifest["schema_detectado"]
+        assert "cobertura_territorial" in dataset_manifest
+        assert "periodo_referencia" in dataset_manifest
+        assert "qualidade_carga" in dataset_manifest
+        assert dataset_manifest["versao_parser"] == "vtest"
         assert manifest["steps"]["publish"]["rows"] == 2
         assert manifest["steps"]["publish"]["dataset_metadata"]["dataset_name"] == "df_municipios"
         assert manifest["steps"]["publish"]["dataset_metadata"]["dataset_version"] == result["run_id"]

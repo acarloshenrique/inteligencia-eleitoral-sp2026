@@ -6,6 +6,7 @@ Este fluxo adiciona camada de enriquecimento de dados abertos para o ranking mun
 
 - Padronizar chave municipal para cruzamentos: `municipio_id_ibge7 + ano + mes + turno`.
 - Enriquecer `df_mun` com dimensao canonica TSE/IBGE e indicadores socioeconomicos.
+- Materializar `dim_territorio` como fonte unica de verdade para municipio, zona e secao.
 - Publicar dataset enriquecido com versionamento e metricas de match.
 
 ## Entradas
@@ -40,8 +41,27 @@ python scripts/run_open_data_crosswalk.py \
 - `data/outputs/estado_sessao/df_mun_enriched_<run_id>.parquet`
 - `data/outputs/estado_sessao/dim_municipio_<run_id>.parquet`
 - `data/outputs/estado_sessao/dim_municipio_aliases_<run_id>.parquet`
+- `lake/silver/dim_territorio`
+- `lake/gold/dim_territorio`
 - `data/outputs/pipeline_runs/open_data_v1/<run_id>/manifest.json`
 - Catalogo atualizado em `data/outputs/catalog/`
+
+## Dimensao canonica territorial
+
+Campos minimos de `dim_territorio`:
+
+- `territorio_id`
+- `cod_tse_municipio`
+- `cod_ibge_municipio`
+- `uf`
+- `nome_padronizado`
+- `zona_eleitoral`
+- `secao_eleitoral`
+- `latitude`
+- `longitude`
+- `geohash`
+- `vigencia_inicio`
+- `vigencia_fim`
 
 ## Qualidade minima sugerida
 

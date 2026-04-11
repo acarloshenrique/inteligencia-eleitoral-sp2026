@@ -12,6 +12,8 @@ import pandas as pd
 from config.settings import AppPaths
 from domain.open_data_contracts import validate_municipio_dimension, validate_municipio_enriched
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
+from infrastructure.load_manifest import build_load_manifest
+from infrastructure.territory_matching import build_alias_dimension, layered_match_territory
 
 
 class OpenDataPipelineError(RuntimeError):
@@ -88,28 +90,19 @@ def _build_dim_municipio(mapping_csv_path: Path) -> tuple[pd.DataFrame, pd.DataF
     dim["municipio_id_ibge7"] = dim["codigo_ibge"].map(_normalize_ibge7)
     dim["codigo_ibge"] = dim["municipio_id_ibge7"]
     dim["municipio_norm"] = dim["nome_municipio"].map(_normalize_text)
-    dim["aliases"] = (
-        df[alias_col].map(_parse_aliases)
-        if alias_col
-        else dim["nome_municipio"].map(lambda _: [])
-    )
+    dim["aliases"] = df[alias_col].map(_parse_aliases) if alias_col else dim["nome_municipio"].map(lambda _: [])
     dim = dim.drop_duplicates(subset=["municipio_id_ibge7"]).reset_index(drop=True)
     dim = validate_municipio_dimension(dim)
 
-    alias_rows: list[dict[str, str]] = []
-    for _, row in dim.iterrows():
-        official = str(row["nome_municipio"]).strip()
-        alias_set = {official}
-        alias_set.update(row["aliases"] if isinstance(row["aliases"], list) else [])
-        for alias in alias_set:
-            alias_rows.append(
-                {
-                    "municipio_id_ibge7": str(row["municipio_id_ibge7"]),
-                    "alias_nome": alias,
-                    "alias_norm": _normalize_text(alias),
-                }
-            )
-    dim_alias = pd.DataFrame(alias_rows).drop_duplicates(subset=["municipio_id_ibge7", "alias_norm"]).reset_index(drop=True)
+    alias_map = {
+        str(row["municipio_id_ibge7"]): [_normalize_text(alias) for alias in (row["aliases"] if isinstance(row["aliases"], list) else []) if str(alias).strip()]
+        for _, row in dim.iterrows()
+    }
+    dim_alias = build_alias_dimension(dim_municipio=dim, alias_map=alias_map)
+    if not dim_alias.empty:
+        dim_alias["alias_nome"] = dim_alias["alias_nome"].astype(str).str.strip()
+        dim_alias["alias_norm"] = dim_alias["alias_nome"].map(_normalize_text)
+        dim_alias = dim_alias.drop_duplicates(subset=["municipio_id_ibge7", "alias_norm"]).reset_index(drop=True)
     return dim, dim_alias
 
 
@@ -177,26 +170,27 @@ def _enrich_base(base_df: pd.DataFrame, dim_municipio: pd.DataFrame, dim_alias: 
     base["ano"] = ano_series
     base["mes"] = mes_series
     base["turno"] = turno_series
+    code_col = None
+    for candidate in ("codigo_tse", "cod_tse", "cd_mun_tse"):
+        if candidate in base.columns:
+            code_col = candidate
+            break
 
-    merged = base.merge(
-        dim_alias,
-        left_on="municipio_norm_input",
-        right_on="alias_norm",
-        how="left",
-        suffixes=("", "_alias"),
+    match_result = layered_match_territory(
+        base_df=base,
+        dim_municipio=dim_municipio,
+        dim_alias=dim_alias,
+        input_name_col="municipio",
+        input_code_col=code_col,
     )
-    merged = merged.merge(
-        dim_municipio[["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]],
-        on="municipio_id_ibge7",
-        how="left",
-    )
+    merged = match_result.matched_df
     if not socio_df.empty:
         merged = merged.merge(socio_df, on="codigo_ibge", how="left", suffixes=("", "_socio"))
-    merged["join_status"] = merged["municipio_id_ibge7"].map(
-        lambda v: "matched" if pd.notna(v) and str(v).strip() else "no_match"
-    )
+    merged["join_confidence"] = pd.to_numeric(merged.get("join_confidence"), errors="coerce")
     merged["canonical_key"] = merged.apply(_build_canonical_key, axis=1)
-    return validate_municipio_enriched(merged)
+    merged = validate_municipio_enriched(merged)
+    merged.attrs["review_queue_df"] = match_result.review_queue_df
+    return merged
 
 
 def run_open_data_crosswalk_pipeline(
@@ -206,7 +200,7 @@ def run_open_data_crosswalk_pipeline(
     pipeline_version: str = "open_data_v1",
 ) -> dict:
     run_id = _ts_now_compact()
-    runs_root = paths.data_root / "outputs" / "pipeline_runs" / pipeline_version / run_id
+    runs_root = paths.ingestion_root / "pipeline_runs" / pipeline_version / run_id
     runs_root.mkdir(parents=True, exist_ok=True)
 
     if not inputs.base_parquet_path.exists():
@@ -216,15 +210,19 @@ def run_open_data_crosswalk_pipeline(
     dim_municipio, dim_alias = _build_dim_municipio(inputs.mapping_csv_path)
     socio_df = _load_socio(inputs.socio_csv_path)
     enriched_df = _enrich_base(base_df, dim_municipio, dim_alias, socio_df, inputs)
+    review_queue_df = enriched_df.attrs.get("review_queue_df", pd.DataFrame())
+    enriched_df.attrs = {}
 
-    outputs_dir = paths.pasta_est
-    outputs_dir.mkdir(parents=True, exist_ok=True)
-    out_path = outputs_dir / f"df_mun_enriched_{run_id}.parquet"
+    paths.gold_root.mkdir(parents=True, exist_ok=True)
+    paths.silver_root.mkdir(parents=True, exist_ok=True)
+    out_path = paths.gold_root / f"df_mun_enriched_{run_id}.parquet"
     enriched_df.to_parquet(out_path, index=False)
-    dim_path = outputs_dir / f"dim_municipio_{run_id}.parquet"
-    dim_alias_path = outputs_dir / f"dim_municipio_aliases_{run_id}.parquet"
+    dim_path = paths.silver_root / f"dim_municipio_{run_id}.parquet"
+    dim_alias_path = paths.silver_root / f"dim_municipio_aliases_{run_id}.parquet"
+    review_queue_path = paths.silver_root / f"manual_review_queue_{run_id}.parquet"
     dim_municipio.to_parquet(dim_path, index=False)
     dim_alias.to_parquet(dim_alias_path, index=False)
+    review_queue_df.to_parquet(review_queue_path, index=False)
 
     metadata = build_dataset_metadata(
         dataset_name="df_municipios_enriched",
@@ -243,11 +241,26 @@ def run_open_data_crosswalk_pipeline(
     )
     dim_refs = register_dataset_version(paths, dim_metadata)
     join_rate = float((enriched_df["join_status"] == "matched").mean()) if len(enriched_df) else 0.0
+    load_manifest = build_load_manifest(
+        source_name="df_municipios_enriched",
+        collected_at_utc=datetime.now(UTC).isoformat(),
+        dataset_path=out_path,
+        df=enriched_df,
+        parser_version=pipeline_version,
+        quality={
+            "status": "ok" if join_rate >= 0.5 else "warning",
+            "rows": int(len(enriched_df)),
+            "matched_rows": int((enriched_df["join_status"] == "matched").sum()),
+            "manual_review_rows": int((enriched_df["join_status"] == "manual_review").sum()),
+            "join_rate": round(join_rate, 6),
+        },
+    )
 
     manifest = {
         "pipeline_version": pipeline_version,
         "run_id": run_id,
         "created_at_utc": datetime.now(UTC).isoformat(),
+        "dataset_manifest": load_manifest,
         "inputs": {
             "base_parquet_path": str(inputs.base_parquet_path),
             "mapping_csv_path": str(inputs.mapping_csv_path),
@@ -259,17 +272,35 @@ def run_open_data_crosswalk_pipeline(
             "catalog_latest_index_path": catalog_refs["latest_index_path"],
             "dim_municipio_path": str(dim_path),
             "dim_municipio_aliases_path": str(dim_alias_path),
+            "manual_review_queue_path": str(review_queue_path),
             "dim_catalog_path": dim_refs["catalog_path"],
             "dim_catalog_latest_index_path": dim_refs["latest_index_path"],
         },
         "quality": {
             "rows": int(len(enriched_df)),
             "matched_rows": int((enriched_df["join_status"] == "matched").sum()),
+            "manual_review_rows": int((enriched_df["join_status"] == "manual_review").sum()),
             "join_rate": join_rate,
         },
         "source_of_truth": {
             "mapping_dataset": str(inputs.mapping_csv_path),
             "join_key": "municipio_id_ibge7",
+        },
+        "matching": {
+            "layers": [
+                "exact_code",
+                "exact_name",
+                "historical_alias",
+                "fuzzy_score",
+                "manual_review",
+            ],
+            "contract_fields": [
+                "join_status",
+                "join_method",
+                "join_confidence",
+                "needs_review",
+            ],
+            "manual_review_queue_path": str(review_queue_path),
         },
     }
     manifest_path = runs_root / "manifest.json"
@@ -281,3 +312,4 @@ def run_open_data_crosswalk_pipeline(
         "dim_municipio_path": str(dim_path),
         "join_rate": join_rate,
     }
+

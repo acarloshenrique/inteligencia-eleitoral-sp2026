@@ -1,0 +1,29 @@
+{
+  "domains": [
+    {
+      "key": "eleitoral_oficial",
+      "label": "Eleitoral Oficial",
+      "description": "Fontes primárias oficiais de votos, resultados, cadastro e chaves eleitorais."
+    },
+    {
+      "key": "socioeconomico",
+      "label": "Socioeconômico",
+      "description": "Indicadores de renda, educação, população, emprego e contexto socioeconômico."
+    },
+    {
+      "key": "territorial",
+      "label": "Territorial",
+      "description": "Fontes de priorização geográfica, vulnerabilidade territorial e cobertura local."
+    },
+    {
+      "key": "midia_e_social",
+      "label": "Mídia e Social",
+      "description": "Sinais de mídia, social listening, audiência e capilaridade digital."
+    },
+    {
+      "key": "operacoes_de_campanha",
+      "label": "Operações de Campanha",
+      "description": "Dados de campo, ativação, logística, produtividade e execução operacional."
+    }
+  ]
+}

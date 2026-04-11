@@ -1,0 +1,79 @@
+{
+  "pipeline": "medallion",
+  "pipeline_version": "medallion_v1",
+  "domains": [
+    {
+      "domain": "eleitoral_oficial",
+      "assets": [
+        {
+          "name": "base_eleitoral_remoto",
+          "role": "base_parquet",
+          "url": "https://example.com/df_mun_latest.parquet",
+          "file_name": "df_mun_latest.parquet",
+          "format": "parquet",
+          "required": true
+        },
+        {
+          "name": "mapping_tse_ibge",
+          "role": "mapping_csv",
+          "url": "https://example.com/municipios_tse_ibge.csv",
+          "file_name": "municipios_tse_ibge.csv",
+          "format": "csv",
+          "required": true
+        }
+      ]
+    },
+    {
+      "domain": "socioeconomico",
+      "assets": [
+        {
+          "name": "indicadores_socio",
+          "role": "socio_csv",
+          "url": "https://example.com/indicadores_municipais.csv",
+          "file_name": "indicadores_municipais.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    },
+    {
+      "domain": "territorial",
+      "assets": [
+        {
+          "name": "indicadores_territoriais",
+          "role": "seade_csv",
+          "url": "https://example.com/seade_ipvs_emprego_saude.csv",
+          "file_name": "seade_ipvs_emprego_saude.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    },
+    {
+      "domain": "midia_e_social",
+      "assets": [
+        {
+          "name": "social_listening_municipios",
+          "role": "social_csv",
+          "url": "https://example.com/social_listening_municipios.csv",
+          "file_name": "social_listening_municipios.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    },
+    {
+      "domain": "operacoes_de_campanha",
+      "assets": [
+        {
+          "name": "operacoes_campo",
+          "role": "operacoes_csv",
+          "url": "https://example.com/operacoes_campo.csv",
+          "file_name": "operacoes_campo.csv",
+          "format": "csv",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

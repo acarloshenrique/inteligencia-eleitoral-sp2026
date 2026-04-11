@@ -1,0 +1,20 @@
+{
+  "domain": "operacoes_de_campanha",
+  "label": "Operações de Campanha",
+  "sources": [
+    {
+      "name": "operacoes_campo",
+      "role": "operacoes_csv",
+      "url": "https://example.com/operacoes_campo.csv",
+      "format": "csv",
+      "priority": "B"
+    },
+    {
+      "name": "transferencias_emendas",
+      "role": "fiscal_csv",
+      "url": "https://example.com/transparencia_transferencias_emendas.csv",
+      "format": "csv",
+      "priority": "B"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "domain": "midia_e_social",
+  "label": "Mídia e Social",
+  "sources": [
+    {
+      "name": "social_listening_municipios",
+      "role": "social_csv",
+      "url": "https://example.com/social_listening_municipios.csv",
+      "format": "csv",
+      "priority": "B"
+    }
+  ]
+}

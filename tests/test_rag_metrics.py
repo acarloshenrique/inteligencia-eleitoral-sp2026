@@ -8,18 +8,30 @@ from infrastructure.rag_metrics import RagMetricsTracker
 
 def _build_paths(tmp: str) -> AppPaths:
     root = Path(tmp)
-    pasta_est = root / "outputs" / "estado_sessao"
-    pasta_rel = root / "outputs" / "relatorios"
+    ingestion_root = root / "ingestion"
+    lake_root = root / "lake"
+    bronze_root = lake_root / "bronze"
+    silver_root = lake_root / "silver"
+    gold_root = lake_root / "gold"
+    gold_reports_root = gold_root / "reports"
+    gold_serving_root = gold_root / "serving"
+    catalog_root = gold_root / "_catalog"
     chroma = root / "chromadb"
-    runtime_rel = root / "runtime_rel"
-    for p in [pasta_est, pasta_rel, chroma, runtime_rel]:
+    runtime_reports_root = root / "runtime_rel"
+    for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
         p.mkdir(parents=True, exist_ok=True)
     return AppPaths(
         data_root=root,
-        pasta_est=pasta_est,
-        pasta_rel=pasta_rel,
+        ingestion_root=ingestion_root,
+        lake_root=lake_root,
+        bronze_root=bronze_root,
+        silver_root=silver_root,
+        gold_root=gold_root,
+        gold_reports_root=gold_reports_root,
+        gold_serving_root=gold_serving_root,
+        catalog_root=catalog_root,
         chromadb_path=chroma,
-        runtime_rel=runtime_rel,
+        runtime_reports_root=runtime_reports_root,
         ts="20260407_000000",
         metadata_db_path=root / "metadata" / "jobs.sqlite3",
         artifact_root=root / "artifacts",

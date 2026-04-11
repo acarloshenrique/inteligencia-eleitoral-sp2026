@@ -222,6 +222,61 @@ def render_tab_secoes(repo):
         st.info("Rode o Sprint 2 (sprint2_execucao_v2.py) para carregar os dados de seções.")
 
 
+def render_tab_mobilizacao(repo):
+    if repo.table_exists("mart_custo_mobilizacao"):
+        st.markdown("#### Custo de Mobilizacao")
+        df = repo.query_df(
+            """
+            SELECT
+                municipio_id_ibge7,
+                ROUND(ranking_medio_3ciclos, 2) AS ranking_medio_3ciclos,
+                ROUND(indice_medio_3ciclos, 2) AS indice_medio_3ciclos,
+                ROUND(custo_mobilizacao_relativo, 4) AS custo_mobilizacao_relativo,
+                ROUND(emprego_formal, 4) AS emprego_formal,
+                ROUND(urbanizacao_pct, 4) AS urbanizacao_pct,
+                ROUND(acesso_internet_pct, 4) AS acesso_internet_pct,
+                ROUND(estrutura_urbana_indice, 4) AS estrutura_urbana_indice,
+                ROUND(ruralidade_pct, 4) AS ruralidade_pct
+            FROM mart_custo_mobilizacao
+            ORDER BY custo_mobilizacao_relativo ASC, ranking_medio_3ciclos ASC
+            LIMIT 50
+            """
+        )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Municipios", len(df))
+        c2.metric("Menor custo", f"{df['custo_mobilizacao_relativo'].min():.4f}" if not df.empty else "0.0000")
+        c3.metric("Maior custo", f"{df['custo_mobilizacao_relativo'].max():.4f}" if not df.empty else "0.0000")
+        st.dataframe(
+            df.rename(
+                columns={
+                    "municipio_id_ibge7": "Municipio IBGE",
+                    "ranking_medio_3ciclos": "Ranking 3 ciclos",
+                    "indice_medio_3ciclos": "Indice 3 ciclos",
+                    "custo_mobilizacao_relativo": "Custo Mobilizacao",
+                    "emprego_formal": "Emprego Formal",
+                    "urbanizacao_pct": "Urbanizacao",
+                    "acesso_internet_pct": "Internet",
+                    "estrutura_urbana_indice": "Estrutura Urbana",
+                    "ruralidade_pct": "Ruralidade",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Ranking 3 ciclos": st.column_config.NumberColumn(format="%.2f"),
+                "Indice 3 ciclos": st.column_config.NumberColumn(format="%.2f"),
+                "Custo Mobilizacao": st.column_config.NumberColumn(format="%.4f"),
+                "Emprego Formal": st.column_config.NumberColumn(format="%.4f"),
+                "Urbanizacao": st.column_config.NumberColumn(format="%.4f"),
+                "Internet": st.column_config.NumberColumn(format="%.4f"),
+                "Estrutura Urbana": st.column_config.NumberColumn(format="%.4f"),
+                "Ruralidade": st.column_config.NumberColumn(format="%.4f"),
+            },
+        )
+    else:
+        st.info("Publique o dataset gold `mart_custo_mobilizacao` para visualizar logistica de campo.")
+
+
 def render_tab_ranking(df_mun):
     cl_opts = st.multiselect("Cluster", ["Diamante", "Alavanca", "Consolidação", "Descarte"], default=["Diamante", "Alavanca"])
     busca = st.text_input("Buscar município", "")
