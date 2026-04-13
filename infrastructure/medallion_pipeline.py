@@ -23,6 +23,7 @@ from domain.open_data_contracts import (
     validate_silver_dim_municipio,
     validate_silver_fato_municipio,
 )
+from infrastructure.allocation_strategy import load_allocation_strategy
 from infrastructure.data_quality import (
     apply_row_quality_scores,
     compute_drift_score,
@@ -58,7 +59,7 @@ class MedallionInputs:
     mes: int | None = None
     turno: int | None = None
     window_cycles: int = 3
-    allocation_budget: float = 50_000.0
+    allocation_budget: float | None = None
     uf: str = "SP"
 
 
@@ -1971,6 +1972,8 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         dim_territorio=dim_territorio,
         run_id=run_id,
     )
+    allocation_strategy = load_allocation_strategy(paths)
+    allocation_budget = float(inputs.allocation_budget if inputs.allocation_budget is not None else allocation_strategy.default_budget)
     allocation_scores = build_modular_allocation_scores(
         mart_municipio=gold_outputs.get("mart_municipio_eleitoral", pd.DataFrame()),
         mart_potencial=gold_outputs.get("mart_potencial_eleitoral_social", pd.DataFrame()),
@@ -1979,13 +1982,15 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         mart_sensibilidade=gold_outputs.get("mart_sensibilidade_investimento_publico", pd.DataFrame()),
         mart_midia=mart_paid_media,
         features=feature_store_df,
+        score_weights=allocation_strategy.score_modular_weights.normalized(),
+        risk_weights=allocation_strategy.risk_weights.normalized(),
     )
-    budget_simulation = simulate_budget(allocation_scores, total_budget=inputs.allocation_budget)
+    budget_simulation = simulate_budget(allocation_scores, total_budget=allocation_budget)
     allocation_recommendations = recommend_allocation(
         scores=allocation_scores,
         budget_simulation=budget_simulation,
         mart_message=mart_social_message,
-        total_budget=inputs.allocation_budget,
+        total_budget=allocation_budget,
     )
     if not allocation_scores.empty:
         gold_outputs["mart_score_alocacao_modular"] = allocation_scores
@@ -2115,7 +2120,11 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
                 ],
             },
             "allocation": {
-                "budget_simulado": float(inputs.allocation_budget),
+                "budget_simulado": allocation_budget,
+                "strategy_version": allocation_strategy.version,
+                "strategy_source_path": str(allocation_strategy.source_path) if allocation_strategy.source_path else None,
+                "tenant_override_path": str(allocation_strategy.tenant_override_path) if allocation_strategy.tenant_override_path else None,
+                "score_modular_weights": allocation_strategy.score_modular_weights.normalized(),
                 "datasets": {
                     "score_modular": published_paths.get("mart_score_alocacao_modular"),
                     "simulacao_orcamento": published_paths.get("mart_simulacao_orcamento"),

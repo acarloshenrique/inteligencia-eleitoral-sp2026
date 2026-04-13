@@ -3,8 +3,10 @@ import logging
 from application.input_safety import sanitize_user_prompt
 from application.intent_router import resolve_intent_query
 from application.interfaces import AIService, AnalyticsRepository, ReportStore
+from config.settings import get_settings
 from domain.allocation import calcular_alocacao
 from domain.constants import CARGOS_EST, PESOS_CLUSTER, SYSTEM_PROMPT, TETOS
+from infrastructure.allocation_strategy import load_allocation_strategy
 from domain.contracts import validate_alocacao_output, validate_municipios_input
 from domain.errors import AppOperationalError, ErrorCode, ErrorDetail
 
@@ -22,15 +24,28 @@ def executar_alocacao(
 ):
     try:
         df_mun = validate_municipios_input(df_mun)
+        try:
+            strategy = load_allocation_strategy(get_settings().build_paths())
+            pesos_cluster = strategy.cluster_weights
+            tetos = strategy.office_caps
+            cargos_est = strategy.statewide_offices
+            channel_weights = strategy.channel_weights
+        except Exception as strategy_error:
+            logger.warning("Falha ao carregar estrategia de alocacao; usando constantes padrao: %s", strategy_error)
+            pesos_cluster = PESOS_CLUSTER
+            tetos = TETOS
+            cargos_est = CARGOS_EST
+            channel_weights = None
         df_r = calcular_alocacao(
             df_mun=df_mun,
             budget=budget,
             cargo=cargo,
             n=n,
             split_d=split_d,
-            pesos_cluster=PESOS_CLUSTER,
-            tetos=TETOS,
-            cargos_est=CARGOS_EST,
+            pesos_cluster=pesos_cluster,
+            tetos=tetos,
+            cargos_est=cargos_est,
+            channel_weights=channel_weights,
         )
         df_r = validate_alocacao_output(df_r)
     except Exception as e:

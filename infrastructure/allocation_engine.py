@@ -49,8 +49,18 @@ def build_modular_allocation_scores(
     mart_sensibilidade: pd.DataFrame,
     mart_midia: pd.DataFrame,
     features: pd.DataFrame | None = None,
+    score_weights: dict[str, float] | None = None,
+    risk_weights: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     features = features if features is not None else pd.DataFrame()
+    score_weights = score_weights or {
+        "potencial_eleitoral": 0.30,
+        "oportunidade": 0.25,
+        "eficiencia_midia": 0.20,
+        "custo": 0.15,
+        "risco_invertido": 0.10,
+    }
+    risk_weights = risk_weights or {"volatilidade_historica": 0.70, "qualidade_dados": 0.30}
     base = _base_municipios(mart_municipio, mart_potencial, mart_territorial, mart_custo, mart_sensibilidade, mart_midia, features)
     if base.empty:
         return pd.DataFrame(columns=["municipio_id_ibge7", *SCORE_COLUMNS, "score_alocacao", "roi_politico_estimado"])
@@ -106,15 +116,17 @@ def build_modular_allocation_scores(
     )
     risk_base = _normalize(_ensure_metric(score, "volatilidade_historica"), neutral=0.25)
     quality_risk = 1.0 - _ensure_metric(score, "data_quality_score", 1.0).clip(0.0, 1.0)
-    score["score_risco"] = (0.70 * risk_base + 0.30 * quality_risk).clip(0.0, 1.0).round(6)
+    score["score_risco"] = (
+        risk_weights["volatilidade_historica"] * risk_base + risk_weights["qualidade_dados"] * quality_risk
+    ).clip(0.0, 1.0).round(6)
     score["score_alocacao"] = (
         100.0
         * (
-            0.30 * score["score_potencial_eleitoral"]
-            + 0.25 * score["score_oportunidade"]
-            + 0.20 * score["score_eficiencia_midia"]
-            + 0.15 * score["score_custo"]
-            + 0.10 * (1.0 - score["score_risco"])
+            score_weights["potencial_eleitoral"] * score["score_potencial_eleitoral"]
+            + score_weights["oportunidade"] * score["score_oportunidade"]
+            + score_weights["eficiencia_midia"] * score["score_eficiencia_midia"]
+            + score_weights["custo"] * score["score_custo"]
+            + score_weights["risco_invertido"] * (1.0 - score["score_risco"])
         )
     ).round(6)
     score["roi_politico_estimado"] = (

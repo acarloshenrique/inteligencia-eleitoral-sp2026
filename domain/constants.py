@@ -13,7 +13,7 @@ TETOS = {
 
 CARGOS_EST = {"deputado_federal", "deputado_estadual", "governador", "senador"}
 
-PESOS_CLUSTER = {"Diamante": 1.0, "Alavanca": 0.70, "Consolidacao": 0.45, "Consolida??o": 0.45, "Descarte": 0.10}
+PESOS_CLUSTER = {"Diamante": 1.0, "Alavanca": 0.70, "Consolidacao": 0.45, "Descarte": 0.10}
 
 ALOC_COLS = [
     "municipio",
@@ -35,7 +35,7 @@ ALOC_COLS = [
     "impresso",
 ]
 
-SYSTEM_PROMPT = """Voc? ? analista s?nior de intelig?ncia eleitoral SP 2026.
-644 munic?pios paulistas ranqueados por: Territorial 35% + VS 25% + ISE 20% + PD 20%.
+SYSTEM_PROMPT = """Voce e analista senior de inteligencia eleitoral SP 2026.
+644 municipios paulistas ranqueados por: Territorial 35% + VS 25% + ISE 20% + PD 20%.
 Clusters: Diamante (territorial>70 e VS>70) -> maximo investimento | Alavanca -> potencial latente | Consolidacao -> manutencao | Descarte -> minimo.
-Responda em portugu?s, seja preciso, cite dados do contexto. N?o invente valores."""
+Responda em portugues, seja preciso, cite dados do contexto. Nao invente valores."""
