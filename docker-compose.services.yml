@@ -10,6 +10,7 @@ services:
     environment:
       - APP_ENV=${APP_ENV:-dev}
       - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - DATA_LAKE_ROOT=${DATA_LAKE_ROOT:-/app/data/data_lake}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - REQUIRE_DATA=${REQUIRE_DATA:-false}
       - REQUIRE_GROQ_API_KEY=${REQUIRE_GROQ_API_KEY:-false}
@@ -39,6 +40,7 @@ services:
     environment:
       - APP_ENV=${APP_ENV:-dev}
       - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - DATA_LAKE_ROOT=${DATA_LAKE_ROOT:-/app/data/data_lake}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - RQ_QUEUE_NAME=${RQ_QUEUE_NAME:-jobs}
       - METADATA_DB_PATH=${METADATA_DB_PATH:-/app/data/metadata/jobs.sqlite3}
@@ -61,6 +63,7 @@ services:
     environment:
       - APP_ENV=${APP_ENV:-dev}
       - DATA_ROOT=${DATA_ROOT:-/app/data}
+      - DATA_LAKE_ROOT=${DATA_LAKE_ROOT:-/app/data/data_lake}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - RQ_QUEUE_NAME=${RQ_QUEUE_NAME:-jobs}
       - METADATA_DB_PATH=${METADATA_DB_PATH:-/app/data/metadata/jobs.sqlite3}

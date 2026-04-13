@@ -43,6 +43,8 @@ def validate_municipio_enriched(df: pd.DataFrame) -> pd.DataFrame:
         "join_method",
         "join_confidence",
         "needs_review",
+        "coverage",
+        "data_quality_score",
     ]
     missing = _missing_columns(df, required)
     if missing:
@@ -69,6 +71,8 @@ def validate_silver_fato_municipio(df: pd.DataFrame) -> pd.DataFrame:
         "join_method",
         "join_confidence",
         "needs_review",
+        "coverage",
+        "data_quality_score",
     ]
     missing = _missing_columns(df, required)
     if missing:
@@ -96,6 +100,14 @@ def validate_silver_dim_territorio(df: pd.DataFrame) -> pd.DataFrame:
         "geohash",
         "vigencia_inicio",
         "vigencia_fim",
+        "cod_tse",
+        "cod_ibge",
+        "municipio",
+        "zona",
+        "secao",
+        "geolocalizacao",
+        "coverage",
+        "data_quality_score",
     ]
     missing = _missing_columns(df, required)
     if missing:

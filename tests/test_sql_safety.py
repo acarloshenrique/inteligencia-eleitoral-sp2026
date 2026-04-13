@@ -27,4 +27,8 @@ def test_is_allowed_table_name_accepts_only_known_tables():
     assert is_allowed_table_name("alocacao")
     assert is_allowed_table_name("secoes")
     assert is_allowed_table_name("mapa_tatico")
+    assert is_allowed_table_name("mart_score_alocacao_modular")
+    assert is_allowed_table_name("mart_recomendacao_alocacao")
+    assert is_allowed_table_name("mart_midia_paga_municipio")
+    assert is_allowed_table_name("mart_social_mensagem_territorial")
     assert not is_allowed_table_name("usuarios")

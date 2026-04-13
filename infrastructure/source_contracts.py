@@ -10,6 +10,7 @@ from domain.source_contracts import (
     FiscalRow,
     IbgeSocioRow,
     MappingTseIbgeRow,
+    PaidMediaAdsRow,
     SeadeRow,
     SecaoResultadoRow,
 )
@@ -24,10 +25,11 @@ def _validate_rows(df: pd.DataFrame, model: type[BaseModel], source_name: str, m
         return
     errors: list[str] = []
     for idx, row in enumerate(df.to_dict("records"), start=1):
+        clean_row = {key: (None if pd.isna(value) else value) for key, value in row.items()}
         try:
-            model.model_validate(row)
+            model.model_validate(clean_row)
             for key in ("codigo_tse", "codigo_ibge", "nome_municipio", "municipio"):
-                if key in row and str(row.get(key, "")).strip() == "":
+                if key in clean_row and str(clean_row.get(key, "")).strip() == "":
                     raise SourceContractError(f"{source_name} linha {idx}: campo '{key}' vazio")
         except ValidationError as exc:
             errors.append(f"{source_name} linha {idx}: {exc.errors()[0]['msg']}")
@@ -50,6 +52,7 @@ def validate_input_contracts(
     ibge_df: pd.DataFrame,
     seade_df: pd.DataFrame,
     fiscal_df: pd.DataFrame,
+    social_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     _validate_rows(base_df, BaseEleitoralRow, "base_eleitoral")
     _validate_rows(mapping_df, MappingTseIbgeRow, "mapping_tse_ibge")
@@ -57,7 +60,10 @@ def validate_input_contracts(
     _validate_rows(secao_df, SecaoResultadoRow, "resultado_secao")
     _validate_rows(ibge_df, IbgeSocioRow, "ibge_indicadores")
     _validate_rows(seade_df, SeadeRow, "seade_indicadores")
+    if social_df is not None:
+        _validate_rows(social_df, PaidMediaAdsRow, "social_ads_engajamento")
     _validate_rows(fiscal_df, FiscalRow, "transparencia_fiscal")
+    social_rows = int(len(social_df)) if social_df is not None else 0
     return {
         "validated_sources": {
             "base_eleitoral": int(len(base_df)),
@@ -66,6 +72,7 @@ def validate_input_contracts(
             "resultado_secao": int(len(secao_df)),
             "ibge_indicadores": int(len(ibge_df)),
             "seade_indicadores": int(len(seade_df)),
+            "social_ads_engajamento": social_rows,
             "transparencia_fiscal": int(len(fiscal_df)),
         }
     }

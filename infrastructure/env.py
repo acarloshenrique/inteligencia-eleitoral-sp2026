@@ -85,13 +85,14 @@ def bootstrap_ambiente(paths: AppPaths):
     if require_data and df_mun_path is None:
         erros.append("REQUIRE_DATA=true, mas nenhum dataset gold de municipios foi encontrado.")
     elif df_mun_path is None:
-        avisos.append("Sem base gold de municipios em lake/gold.")
+        avisos.append("Sem base gold de municipios em data_lake/gold.")
 
     for pasta in [
         paths.ingestion_root,
         paths.bronze_root,
         paths.silver_root,
         paths.gold_root,
+        paths.catalog_root,
         paths.gold_reports_root,
         paths.runtime_reports_root,
     ]:

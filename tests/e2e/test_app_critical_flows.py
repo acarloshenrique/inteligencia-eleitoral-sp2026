@@ -38,8 +38,8 @@ class _FakeStreamlit:
     def success(self, msg):
         self.successes.append(str(msg))
 
-    def tabs(self, _labels):
-        return (_FakeTab(), _FakeTab(), _FakeTab(), _FakeTab())
+    def tabs(self, labels):
+        return tuple(_FakeTab() for _ in labels)
 
 
 @pytest.mark.e2e
@@ -84,10 +84,11 @@ def test_e2e_generate_allocation_happy_path(monkeypatch):
         "executar_alocacao",
         lambda *_: pd.DataFrame([{"budget": 100000, "cluster": "Diamante", "municipio": "Cidade A"}]),
     )
-    monkeypatch.setattr(app_main, "render_tab_chat", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_alocacao", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_secoes", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_ranking", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_prioridade_territorial", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_midia_performance", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_mensagem", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_simulacao", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_monitoramento", lambda *_: None)
 
     app_main.run_app()
     assert "aloc" in st.session_state

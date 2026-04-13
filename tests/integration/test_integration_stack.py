@@ -136,3 +136,34 @@ def test_integration_chroma_llm_service_with_fallback(monkeypatch):
         assert "Cidade A" in sem
         assert txt == "Resposta fake"
         assert tokens == 123
+
+
+@pytest.mark.integration
+def test_integration_storage_registers_product_gold_marts():
+    pytest.importorskip("duckdb")
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = _paths(tmp)
+        df_mun = pd.DataFrame([{"municipio": "Cidade A", "ranking_final": 1, "indice_final": 90.0}])
+        pd.DataFrame(
+            [
+                {
+                    "municipio_id_ibge7": "3500000",
+                    "ranking": 1,
+                    "score_alocacao": 91.0,
+                    "score_potencial_eleitoral": 0.9,
+                    "score_oportunidade": 0.8,
+                    "score_eficiencia_midia": 0.7,
+                    "score_custo": 0.6,
+                    "score_risco": 0.1,
+                }
+            ]
+        ).to_parquet(paths.gold_root / "mart_score_alocacao_modular_20260410_120000.parquet", index=False)
+        pd.DataFrame(
+            [{"municipio_id_ibge7": "3500000", "ranking": 1, "verba_sugerida": 50000, "canal_ideal": "meta_ads", "mensagem_ideal": "Emprego"}]
+        ).to_parquet(paths.gold_root / "mart_recomendacao_alocacao_20260410_120000.parquet", index=False)
+        db = carrega_db.__wrapped__(paths, df_mun)
+        repo = DuckDBAnalyticsRepository(db)
+        assert repo.table_exists("mart_score_alocacao_modular")
+        assert repo.table_exists("mart_recomendacao_alocacao")
+        loaded = repo.query_df("SELECT score_alocacao FROM mart_score_alocacao_modular")
+        assert loaded["score_alocacao"].tolist() == [91.0]

@@ -92,6 +92,10 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         assert set(df["join_status"].tolist()) == {"matched", "manual_review"}
         assert set(df["join_method"].dropna().tolist()) >= {"exact_code", "exact_name", "historical_alias", "fuzzy_score", "manual_review"}
         assert "join_confidence" in df.columns
+        assert "coverage" in df.columns
+        assert "data_quality_score" in df.columns
+        assert df["coverage"].between(0, 1).all()
+        assert df["data_quality_score"].between(0, 1).all()
         assert "needs_review" in df.columns
         assert "idhm" in df.columns
         assert "municipio_id_ibge7" in df.columns
@@ -111,6 +115,7 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         assert "municipio" in dataset_manifest["schema_detectado"]
         assert dataset_manifest["qualidade_carga"]["matched_rows"] == 4
         assert dataset_manifest["qualidade_carga"]["manual_review_rows"] == 1
+        assert dataset_manifest["schema_detectado"]["data_quality_score"]
         assert dataset_manifest["versao_parser"] == "open_data_test"
         assert manifest["quality"]["rows"] == 5
         assert manifest["quality"]["matched_rows"] == 4
@@ -125,6 +130,8 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         latest_catalog = catalog_root / "datasets_latest.json"
         latest_payload = json.loads(latest_catalog.read_text(encoding="utf-8"))
         assert latest_payload["df_municipios_enriched"]["dataset_version"] == result["run_id"]
+        assert latest_payload["df_municipios_enriched"]["quality"]["data_quality_score_avg"] > 0
+        assert "coverage" in latest_payload["df_municipios_enriched"]
         assert latest_payload["dim_municipio"]["dataset_version"] == result["run_id"]
 
         dim_path = Path(result["dim_municipio_path"])

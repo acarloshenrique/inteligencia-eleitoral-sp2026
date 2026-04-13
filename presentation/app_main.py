@@ -12,9 +12,14 @@ from presentation.ui import (
     render_sidebar,
     render_tab_alocacao,
     render_tab_chat,
+    render_tab_mensagem,
+    render_tab_midia_performance,
     render_tab_mobilizacao,
+    render_tab_monitoramento,
+    render_tab_prioridade_territorial,
     render_tab_ranking,
     render_tab_secoes,
+    render_tab_simulacao,
 )
 
 
@@ -60,26 +65,20 @@ def run_app():
             st.error(e.to_operational_message())
 
     t1, t2, t3, t4, t5 = st.tabs([
-        "Analista",
-        "Alocacao",
-        "Secoes de Campo",
-        "Mobilizacao",
-        "Ranking",
+        "Prioridade territorial",
+        "Midia e performance",
+        "Mensagem",
+        "Simulacao",
+        "Monitoramento",
     ])
 
     with t1:
-        def _responder(pergunta, hist):
-            try:
-                return responder_pergunta(repo, ai_service, pergunta, hist)
-            except AppError as e:
-                return e.to_operational_message(), "", 0
-
-        render_tab_chat(_responder)
+        render_tab_prioridade_territorial(repo)
     with t2:
-        render_tab_alocacao(paths, report_store)
+        render_tab_midia_performance(repo)
     with t3:
-        render_tab_secoes(repo)
+        render_tab_mensagem(repo)
     with t4:
-        render_tab_mobilizacao(repo)
+        render_tab_simulacao(repo)
     with t5:
-        render_tab_ranking(df_mun)
+        render_tab_monitoramento(repo, df_mun)

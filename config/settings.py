@@ -7,6 +7,8 @@ import tempfile
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from infrastructure.tenancy import build_tenant_context, normalize_tenant_id
+
 
 AppEnv = Literal["dev", "staging", "prod"]
 
@@ -27,6 +29,8 @@ class AppPaths:
     ts: str
     metadata_db_path: Path
     artifact_root: Path
+    tenant_id: str = "default"
+    tenant_root: Path | None = None
 
     @property
     def pasta_est(self) -> Path:
@@ -40,12 +44,18 @@ class AppPaths:
     def runtime_rel(self) -> Path:
         return self.runtime_reports_root
 
+    @property
+    def features_root(self) -> Path:
+        return self.lake_root / "features"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: AppEnv = Field(default="dev", alias="APP_ENV")
     data_root: str | None = Field(default=None, alias="DATA_ROOT")
+    data_lake_root: str | None = Field(default=None, alias="DATA_LAKE_ROOT")
+    tenant_id: str = Field(default="default", alias="TENANT_ID")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     require_data: bool = Field(default=False, alias="REQUIRE_DATA")
     require_groq_api_key: bool = Field(default=False, alias="REQUIRE_GROQ_API_KEY")
@@ -68,6 +78,12 @@ class Settings(BaseSettings):
     vault_token: str = Field(default="", alias="VAULT_TOKEN")
     vault_kv_path: str = Field(default="", alias="VAULT_KV_PATH")
     retention_days: int = Field(default=180, alias="RETENTION_DAYS")
+    ops_daily_ingestion_hour: int = Field(default=5, alias="OPS_DAILY_INGESTION_HOUR")
+    ops_weekly_update_day: str = Field(default="MON", alias="OPS_WEEKLY_UPDATE_DAY")
+    ops_weekly_update_hour: int = Field(default=6, alias="OPS_WEEKLY_UPDATE_HOUR")
+    ops_alert_error_rate_threshold: float = Field(default=0.10, alias="OPS_ALERT_ERROR_RATE_THRESHOLD")
+    ops_alert_latency_p95_ms: float = Field(default=30000.0, alias="OPS_ALERT_LATENCY_P95_MS")
+    ops_alert_daily_cost_usd: float = Field(default=50.0, alias="OPS_ALERT_DAILY_COST_USD")
     lgpd_anonymization_salt: str = Field(default="change-me", alias="LGPD_ANONYMIZATION_SALT")
 
     @field_validator("app_env", mode="before")
@@ -78,8 +94,31 @@ class Settings(BaseSettings):
         env = str(value).strip().lower()
         aliases = {"development": "dev", "dev": "dev", "staging": "staging", "prod": "prod", "production": "prod"}
         if env not in aliases:
-            raise ValueError("APP_ENV inválido. Use: dev, staging ou prod.")
+            raise ValueError("APP_ENV invalido. Use: dev, staging ou prod.")
         return aliases[env]
+
+
+    @field_validator("tenant_id", mode="before")
+    @classmethod
+    def validate_tenant_id(cls, value):
+        return normalize_tenant_id(value)
+
+    @field_validator("ops_daily_ingestion_hour", "ops_weekly_update_hour", mode="before")
+    @classmethod
+    def validate_ops_hour(cls, value):
+        hour = int(value)
+        if hour < 0 or hour > 23:
+            raise ValueError("hora operacional deve estar entre 0 e 23")
+        return hour
+
+    @field_validator("ops_weekly_update_day", mode="before")
+    @classmethod
+    def validate_ops_weekday(cls, value):
+        day = str(value or "MON").strip().upper()
+        allowed = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"}
+        if day not in allowed:
+            raise ValueError("OPS_WEEKLY_UPDATE_DAY invalido")
+        return day
 
     def resolved_data_root(self):
         if self.data_root:
@@ -92,31 +131,56 @@ class Settings(BaseSettings):
 
     def build_paths(self):
         data_root = self.resolved_data_root()
-        lake_root = data_root / "lake"
+        tenant = build_tenant_context(data_root, self.tenant_id)
+        effective_root = tenant.tenant_root
+        if self.data_lake_root and tenant.tenant_id == "default":
+            lake_root = Path(self.data_lake_root).resolve()
+        elif self.data_lake_root:
+            lake_root = effective_root / "data_lake"
+        else:
+            lake_root = effective_root / "data_lake"
         gold_root = lake_root / "gold"
+        catalog_root = lake_root / "catalog"
+        for folder in [
+            data_root,
+            effective_root,
+            effective_root / "ingestion",
+            lake_root,
+            lake_root / "bronze",
+            lake_root / "silver",
+            lake_root / "features",
+            gold_root,
+            catalog_root,
+            gold_root / "reports",
+            gold_root / "serving",
+            effective_root / "chromadb",
+        ]:
+            folder.mkdir(parents=True, exist_ok=True)
         return AppPaths(
             data_root=data_root,
-            ingestion_root=data_root / "ingestion",
+            ingestion_root=effective_root / "ingestion",
             lake_root=lake_root,
             bronze_root=lake_root / "bronze",
             silver_root=lake_root / "silver",
             gold_root=gold_root,
             gold_reports_root=gold_root / "reports",
             gold_serving_root=gold_root / "serving",
-            catalog_root=gold_root / "_catalog",
-            chromadb_path=data_root / "chromadb",
-            runtime_reports_root=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / "gold_reports",
+            catalog_root=catalog_root,
+            chromadb_path=effective_root / "chromadb",
+            runtime_reports_root=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / tenant.tenant_id / "gold_reports",
             ts=self.df_mun_ts,
             metadata_db_path=(
                 Path(self.metadata_db_path).resolve()
                 if self.metadata_db_path
-                else (data_root / "metadata" / "jobs.sqlite3").resolve()
+                else (effective_root / "metadata" / "jobs.sqlite3").resolve()
             ),
             artifact_root=(
                 Path(self.artifact_local_root).resolve()
                 if self.artifact_local_root
-                else (data_root / "artifacts").resolve()
+                else (effective_root / "artifacts").resolve()
             ),
+            tenant_id=tenant.tenant_id,
+            tenant_root=tenant.tenant_root,
         )
 
 

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -27,7 +27,7 @@ def build_alias_dimension(
         municipio_id = str(row["municipio_id_ibge7"]).strip()
         official = str(row["nome_municipio"]).strip()
         municipio_norm = str(row["municipio_norm"]).strip()
-        aliases = set(alias_map.get(municipio_id, []))
+        aliases = {str(a).strip() for a in alias_map.get(municipio_id, []) if str(a).strip()}
         aliases.add(official)
         aliases.add(municipio_norm)
         for alias in aliases:
@@ -43,6 +43,69 @@ def build_alias_dimension(
     return pd.DataFrame(alias_rows).drop_duplicates(subset=["municipio_id_ibge7", "alias_norm"]).reset_index(drop=True)
 
 
+def _candidate_payload(rows: pd.DataFrame, *, score_col: str | None = None) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
+    for _, row in rows.iterrows():
+        item = {
+            "municipio_id_ibge7": row.get("municipio_id_ibge7"),
+            "codigo_tse": row.get("codigo_tse"),
+            "codigo_ibge": row.get("codigo_ibge"),
+            "nome_municipio": row.get("nome_municipio"),
+        }
+        if score_col:
+            item["score"] = round(float(row.get(score_col, 0.0) or 0.0), 6)
+        payload.append(item)
+    return payload
+
+
+def _mark_manual_review(
+    *,
+    base: pd.DataFrame,
+    row_id: int,
+    input_row: pd.Series,
+    candidates: list[dict[str, Any]],
+    reason: str,
+) -> dict[str, Any]:
+    best_score = candidates[0].get("score") if candidates and "score" in candidates[0] else None
+    base.loc[base["_match_row_id"] == row_id, "join_method"] = "manual_review"
+    base.loc[base["_match_row_id"] == row_id, "join_confidence"] = best_score if best_score is not None else 0.0
+    base.loc[base["_match_row_id"] == row_id, "needs_review"] = True
+    base.loc[base["_match_row_id"] == row_id, "match_conflict_reason"] = reason
+    base.loc[base["_match_row_id"] == row_id, "match_candidates"] = str(candidates[:5])
+    return {
+        "municipio_input": input_row.get("municipio_input"),
+        "municipio_norm_input": input_row.get("municipio_norm_input"),
+        "join_status": "manual_review",
+        "join_method": "manual_review",
+        "join_confidence": best_score,
+        "needs_review": True,
+        "match_candidates": candidates[:5],
+        "best_score": best_score,
+        "reason": reason,
+    }
+
+
+def _apply_unique_match(
+    *,
+    base: pd.DataFrame,
+    row_id: int,
+    candidates: pd.DataFrame,
+    method: str,
+    confidence: float,
+) -> bool:
+    unique = candidates.dropna(subset=["municipio_id_ibge7"]).drop_duplicates(subset=["municipio_id_ibge7"])
+    if len(unique) != 1:
+        return False
+    row = unique.iloc[0]
+    mask = base["_match_row_id"] == row_id
+    for col in ["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]:
+        base.loc[mask, col] = row.get(col)
+    base.loc[mask, "join_method"] = method
+    base.loc[mask, "join_confidence"] = confidence
+    base.loc[mask, "match_conflict_reason"] = pd.NA
+    return True
+
+
 def layered_match_territory(
     *,
     base_df: pd.DataFrame,
@@ -56,7 +119,11 @@ def layered_match_territory(
     dim_lookup = dim_municipio[
         ["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]
     ].copy()
+    dim_lookup["codigo_tse"] = dim_lookup["codigo_tse"].astype(str).str.strip()
+    dim_lookup["municipio_norm"] = dim_lookup["municipio_norm"].astype(str).str.strip()
+
     alias_lookup = dim_alias[["municipio_id_ibge7", "alias_nome", "alias_norm"]].copy()
+    alias_lookup["alias_norm"] = alias_lookup["alias_norm"].astype(str).str.strip()
     alias_join = alias_lookup.merge(dim_lookup, on="municipio_id_ibge7", how="left")
 
     base = base_df.copy()
@@ -70,66 +137,55 @@ def layered_match_territory(
     base["join_confidence"] = pd.NA
     base["needs_review"] = False
     base["match_candidates"] = pd.NA
-
-    if input_code_col and input_code_col in base.columns:
-        code_map = dim_lookup.copy()
-        code_map["codigo_tse"] = code_map["codigo_tse"].astype(str).str.strip()
-        base[input_code_col] = base[input_code_col].astype(str).str.strip()
-        code_match = base[[input_code_col, "_match_row_id"]].merge(
-            code_map,
-            left_on=input_code_col,
-            right_on="codigo_tse",
-            how="left",
-        )
-        matched_ids = code_match["municipio_id_ibge7"].notna()
-        if matched_ids.any():
-            by_id = code_match.loc[matched_ids].set_index("_match_row_id")
-            for col in ["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]:
-                base.loc[base["_match_row_id"].isin(by_id.index), col] = (
-                    base.loc[base["_match_row_id"].isin(by_id.index), "_match_row_id"].map(by_id[col])
-                )
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_method"] = "exact_code"
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_confidence"] = 1.0
-
-    unmatched_mask = base["join_method"].isna()
-    if unmatched_mask.any():
-        exact_name = base.loc[unmatched_mask, ["_match_row_id", "municipio_norm_input"]].merge(
-            dim_lookup,
-            left_on="municipio_norm_input",
-            right_on="municipio_norm",
-            how="left",
-        )
-        matched_ids = exact_name["municipio_id_ibge7"].notna()
-        if matched_ids.any():
-            by_id = exact_name.loc[matched_ids].set_index("_match_row_id")
-            for col in ["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]:
-                base.loc[base["_match_row_id"].isin(by_id.index), col] = (
-                    base.loc[base["_match_row_id"].isin(by_id.index), "_match_row_id"].map(by_id[col])
-                )
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_method"] = "exact_name"
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_confidence"] = 1.0
-
-    unmatched_mask = base["join_method"].isna()
-    if unmatched_mask.any():
-        alias_name = base.loc[unmatched_mask, ["_match_row_id", "municipio_norm_input"]].merge(
-            alias_join,
-            left_on="municipio_norm_input",
-            right_on="alias_norm",
-            how="left",
-        )
-        matched_ids = alias_name["municipio_id_ibge7"].notna()
-        if matched_ids.any():
-            by_id = alias_name.loc[matched_ids].set_index("_match_row_id")
-            for col in ["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "nome_municipio", "municipio_norm"]:
-                base.loc[base["_match_row_id"].isin(by_id.index), col] = (
-                    base.loc[base["_match_row_id"].isin(by_id.index), "_match_row_id"].map(by_id[col])
-                )
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_method"] = "historical_alias"
-            base.loc[base["_match_row_id"].isin(by_id.index), "join_confidence"] = 0.99
+    base["match_conflict_reason"] = pd.NA
 
     review_rows: list[dict[str, Any]] = []
-    unmatched_mask = base["join_method"].isna()
-    for idx, row in base.loc[unmatched_mask].iterrows():
+
+    if input_code_col and input_code_col in base.columns:
+        base[input_code_col] = base[input_code_col].astype(str).str.strip()
+        for idx, row in base.loc[base["join_method"].isna()].iterrows():
+            code = str(row.get(input_code_col, "")).strip()
+            if not code:
+                continue
+            candidates = dim_lookup.loc[dim_lookup["codigo_tse"] == code]
+            if candidates.empty:
+                continue
+            row_id = int(row["_match_row_id"])
+            if not _apply_unique_match(base=base, row_id=row_id, candidates=candidates, method="exact_code", confidence=1.0):
+                review_rows.append(
+                    _mark_manual_review(
+                        base=base,
+                        row_id=row_id,
+                        input_row=row,
+                        candidates=_candidate_payload(candidates),
+                        reason="conflicting_exact_code",
+                    )
+                )
+
+    for method, lookup, left_col, right_col, confidence, conflict_reason in [
+        ("exact_name", dim_lookup, "municipio_norm_input", "municipio_norm", 1.0, "conflicting_exact_name"),
+        ("historical_alias", alias_join, "municipio_norm_input", "alias_norm", 0.99, "conflicting_alias"),
+    ]:
+        for idx, row in base.loc[base["join_method"].isna()].iterrows():
+            value = str(row.get(left_col, "")).strip()
+            if not value:
+                continue
+            candidates = lookup.loc[lookup[right_col] == value]
+            if candidates.empty:
+                continue
+            row_id = int(row["_match_row_id"])
+            if not _apply_unique_match(base=base, row_id=row_id, candidates=candidates, method=method, confidence=confidence):
+                review_rows.append(
+                    _mark_manual_review(
+                        base=base,
+                        row_id=row_id,
+                        input_row=row,
+                        candidates=_candidate_payload(candidates),
+                        reason=conflict_reason,
+                    )
+                )
+
+    for idx, row in base.loc[base["join_method"].isna()].iterrows():
         normalized = str(row["municipio_norm_input"]).strip()
         candidates: list[dict[str, Any]] = []
         for _, candidate in alias_join.iterrows():
@@ -148,37 +204,41 @@ def layered_match_territory(
                 }
             )
         candidates.sort(key=lambda item: item["score"], reverse=True)
-        top = candidates[:3]
+        deduped: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for candidate in candidates:
+            municipio_id = str(candidate.get("municipio_id_ibge7", ""))
+            if municipio_id in seen_ids:
+                continue
+            seen_ids.add(municipio_id)
+            deduped.append(candidate)
+        top = deduped[:3]
         best = top[0] if top else None
         second = top[1] if len(top) > 1 else None
+        row_id = int(row["_match_row_id"])
         if best and best["score"] >= fuzzy_threshold and (
             second is None or (best["score"] - second["score"]) >= ambiguous_gap
         ):
-            base.at[idx, "municipio_id_ibge7"] = best["municipio_id_ibge7"]
-            base.at[idx, "codigo_tse"] = best["codigo_tse"]
-            base.at[idx, "codigo_ibge"] = best["codigo_ibge"]
-            base.at[idx, "nome_municipio"] = best["nome_municipio"]
-            base.at[idx, "municipio_norm"] = best["alias_norm"]
-            base.at[idx, "join_method"] = "fuzzy_score"
-            base.at[idx, "join_confidence"] = best["score"]
+            mask = base["_match_row_id"] == row_id
+            base.loc[mask, "municipio_id_ibge7"] = best["municipio_id_ibge7"]
+            base.loc[mask, "codigo_tse"] = best["codigo_tse"]
+            base.loc[mask, "codigo_ibge"] = best["codigo_ibge"]
+            base.loc[mask, "nome_municipio"] = best["nome_municipio"]
+            base.loc[mask, "municipio_norm"] = best["alias_norm"]
+            base.loc[mask, "join_method"] = "fuzzy_score"
+            base.loc[mask, "join_confidence"] = best["score"]
+            base.loc[mask, "match_conflict_reason"] = pd.NA
             continue
 
-        base.at[idx, "join_method"] = "manual_review"
-        base.at[idx, "join_confidence"] = best["score"] if best else pd.NA
-        base.at[idx, "needs_review"] = True
-        base.at[idx, "match_candidates"] = str(top)
+        reason = "ambiguous_fuzzy" if best else "no_candidate"
         review_rows.append(
-            {
-                "municipio_input": row["municipio_input"],
-                "municipio_norm_input": normalized,
-                "join_status": "manual_review",
-                "join_method": "manual_review",
-                "join_confidence": best["score"] if best else None,
-                "needs_review": True,
-                "match_candidates": top,
-                "best_score": best["score"] if best else None,
-                "reason": "ambiguous_fuzzy" if best else "no_candidate",
-            }
+            _mark_manual_review(
+                base=base,
+                row_id=row_id,
+                input_row=row,
+                candidates=top,
+                reason=reason,
+            )
         )
 
     base["join_status"] = base["join_method"].map(

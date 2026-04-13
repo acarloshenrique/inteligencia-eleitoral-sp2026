@@ -70,6 +70,12 @@ def test_register_dataset_version_writes_catalog_and_latest_index():
         assert entry["dataset_version"] == "20260407_010101"
         assert len(entry["sha256"]) == 64
         assert entry["rows"] == 1
+        assert entry["source"]["name"] == "df_municipios"
+        assert entry["version"]["dataset"] == "20260407_010101"
+        assert "schema" in entry and entry["schema"]["municipio"]
+        assert "coverage" in entry and entry["coverage"]["municipios_cobertos"] == 1
+        assert "quality" in entry and entry["quality"]["status"] == "ok"
+        assert entry["lgpd_classification"] == "public_open_data_or_derived_aggregate"
 
         latest_data = json.loads(latest_path.read_text(encoding="utf-8"))
         assert latest_data["df_municipios"]["dataset_version"] == "20260407_010101"

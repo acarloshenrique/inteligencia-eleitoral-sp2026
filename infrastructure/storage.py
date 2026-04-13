@@ -58,6 +58,13 @@ def carrega_db(paths, df_mun):
         ("mart_custo_mobilizacao", "mart_custo_mobilizacao_*.parquet"),
         ("mart_priorizacao_territorial_sp", "mart_priorizacao_territorial_sp_*.parquet"),
         ("dim_tempo", "dim_tempo_*.parquet"),
+        ("mart_municipio_eleitoral", "mart_municipio_eleitoral_*.parquet"),
+        ("mart_score_alocacao_modular", "mart_score_alocacao_modular_*.parquet"),
+        ("mart_simulacao_orcamento", "mart_simulacao_orcamento_*.parquet"),
+        ("mart_recomendacao_alocacao", "mart_recomendacao_alocacao_*.parquet"),
+        ("mart_midia_paga_municipio", "mart_midia_paga_municipio_*.parquet"),
+        ("mart_social_mensagem_territorial", "mart_social_mensagem_territorial_*.parquet"),
+        ("mart_social_canal_regiao", "mart_social_canal_regiao_*.parquet"),
     ]:
         found = sorted(paths.gold_root.glob(glob), reverse=True)
         if found:

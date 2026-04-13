@@ -321,3 +321,184 @@ def render_tab_ranking(df_mun):
         hide_index=True,
         column_config={c: st.column_config.NumberColumn(format="%.1f") for c in ["Índice", "Territorial", "VS", "ISE", "PD"]},
     )
+
+
+# Product decision workflow (Bloco 5)
+from infrastructure.product_reports import (
+    build_explainability_frame,
+    build_product_exports,
+    build_ranking_snapshot,
+)
+
+
+def _repo_table(repo, table_name: str, limit: int | None = None) -> pd.DataFrame:
+    if not repo.table_exists(table_name):
+        return pd.DataFrame()
+    sql = f"SELECT * FROM {table_name}"
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    try:
+        return repo.query_df(sql)
+    except Exception as exc:
+        logger.warning("Falha ao ler tabela %s: %s", table_name, exc)
+        return pd.DataFrame()
+
+
+def _display_columns(df: pd.DataFrame, preferred: list[str]) -> list[str]:
+    cols = [col for col in preferred if col in df.columns]
+    return cols or list(df.columns[:12])
+
+
+def _show_missing(table_name: str) -> None:
+    st.info(f"Not found in repo: {table_name}. Rode o pipeline medallion para publicar este mart gold.")
+
+
+def render_tab_prioridade_territorial(repo):
+    st.markdown("### Prioridade territorial")
+    scores = _repo_table(repo, "mart_score_alocacao_modular")
+    recommendations = _repo_table(repo, "mart_recomendacao_alocacao")
+    if scores.empty:
+        _show_missing("mart_score_alocacao_modular")
+        return
+
+    explain = build_explainability_frame(scores, recommendations)
+    top = scores.sort_values("score_alocacao", ascending=False) if "score_alocacao" in scores.columns else scores.copy()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Territorios", len(top))
+    c2.metric("Score maximo", f"{top['score_alocacao'].max():.1f}" if "score_alocacao" in top.columns else "n/d")
+    c3.metric("Confiabilidade media", f"{explain['confiabilidade'].mean() * 100:.0f}%" if not explain.empty else "0%")
+
+    cols = _display_columns(
+        top,
+        [
+            "ranking",
+            "municipio_id_ibge7",
+            "municipio",
+            "score_alocacao",
+            "score_potencial_eleitoral",
+            "score_oportunidade",
+            "score_eficiencia_midia",
+            "score_custo",
+            "score_risco",
+            "roi_politico_estimado",
+            "desperdicio_midia",
+        ],
+    )
+    st.dataframe(top[cols].head(50), use_container_width=True, hide_index=True)
+
+    st.markdown("#### Explicabilidade")
+    if explain.empty:
+        st.info("Not found in repo: variaveis de explicabilidade")
+    else:
+        selected = st.selectbox("Municipio", explain["municipio"].tolist(), key="expl_municipio")
+        row = explain[explain["municipio"] == selected].iloc[0]
+        st.write(row["por_que_municipio_esta_alto"])
+        st.caption(f"Variaveis: {row['principais_variaveis']}")
+
+
+def render_tab_midia_performance(repo):
+    st.markdown("### Midia e performance")
+    media = _repo_table(repo, "mart_midia_paga_municipio")
+    canais = _repo_table(repo, "mart_social_canal_regiao")
+    if media.empty and canais.empty:
+        _show_missing("mart_midia_paga_municipio / mart_social_canal_regiao")
+        return
+
+    if not media.empty:
+        gasto_col = "gasto" if "gasto" in media.columns else None
+        ctr_col = "ctr" if "ctr" in media.columns else None
+        cpc_col = "cpc" if "cpc" in media.columns else None
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Gasto", f"R$ {pd.to_numeric(media[gasto_col], errors='coerce').sum():,.0f}" if gasto_col else "n/d")
+        c2.metric("CTR medio", f"{pd.to_numeric(media[ctr_col], errors='coerce').mean() * 100:.2f}%" if ctr_col else "n/d")
+        c3.metric("CPC medio", f"R$ {pd.to_numeric(media[cpc_col], errors='coerce').mean():.2f}" if cpc_col else "n/d")
+        cols = _display_columns(media, ["municipio_id_ibge7", "municipio", "plataforma", "gasto", "impressoes", "cliques", "ctr", "cpc", "conversao", "performance"])
+        st.dataframe(media[cols].head(80), use_container_width=True, hide_index=True)
+
+    if not canais.empty:
+        st.markdown("#### Canal por regiao")
+        cols = _display_columns(canais, ["regiao", "plataforma", "performance", "ranking_canal_regiao", "gasto", "ctr", "cpc"])
+        st.dataframe(canais[cols].head(50), use_container_width=True, hide_index=True)
+
+
+def render_tab_mensagem(repo):
+    st.markdown("### Mensagem")
+    messages = _repo_table(repo, "mart_social_mensagem_territorial")
+    if messages.empty:
+        _show_missing("mart_social_mensagem_territorial")
+        return
+    cols = _display_columns(
+        messages,
+        [
+            "ranking_mensagem_cidade",
+            "municipio_id_ibge7",
+            "municipio",
+            "plataforma",
+            "mensagem",
+            "tema",
+            "emocao",
+            "narrativa",
+            "publico_alvo",
+            "performance",
+        ],
+    )
+    st.dataframe(messages[cols].head(80), use_container_width=True, hide_index=True)
+
+
+def render_tab_simulacao(repo):
+    st.markdown("### Simulacao")
+    scores = _repo_table(repo, "mart_score_alocacao_modular")
+    recommendations = _repo_table(repo, "mart_recomendacao_alocacao")
+    simulations = _repo_table(repo, "mart_simulacao_orcamento")
+    media = _repo_table(repo, "mart_midia_paga_municipio")
+    messages = _repo_table(repo, "mart_social_mensagem_territorial")
+    if scores.empty and recommendations.empty and simulations.empty:
+        _show_missing("mart_simulacao_orcamento / mart_recomendacao_alocacao")
+        return
+
+    if not simulations.empty:
+        cols = _display_columns(simulations, ["ranking", "municipio_id_ibge7", "verba_simulada", "impacto_incremental_estimado", "roi_politico_estimado", "desperdicio_midia", "pergunta_respondida"])
+        st.dataframe(simulations[cols].head(50), use_container_width=True, hide_index=True)
+    if not recommendations.empty:
+        st.markdown("#### Recomendacao automatica")
+        cols = _display_columns(recommendations, ["ranking", "municipio_id_ibge7", "verba_sugerida", "canal_ideal", "mensagem_ideal", "justificativa"])
+        st.dataframe(recommendations[cols].head(50), use_container_width=True, hide_index=True)
+
+    exports = build_product_exports(scores=scores, recommendations=recommendations, simulations=simulations, media=media, messages=messages)
+    c1, c2, c3 = st.columns(3)
+    c1.download_button("PDF executivo", data=exports["pdf_bytes"], file_name=f"relatorio_executivo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", mime="application/pdf", use_container_width=True)
+    c2.download_button("Planilha operacional", data=exports["xlsx_bytes"], file_name=f"plano_operacional_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+    c3.download_button("Ranking atualizado", data=exports["ranking_csv_bytes"], file_name=f"ranking_atualizado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv", use_container_width=True)
+
+
+def render_tab_monitoramento(repo, df_mun):
+    st.markdown("### Monitoramento")
+    tables = [
+        "mart_score_alocacao_modular",
+        "mart_recomendacao_alocacao",
+        "mart_simulacao_orcamento",
+        "mart_midia_paga_municipio",
+        "mart_social_mensagem_territorial",
+        "mart_social_canal_regiao",
+        "dim_tempo",
+    ]
+    status = pd.DataFrame([{"dataset": name, "status": "ok" if repo.table_exists(name) else "Not found in repo"} for name in tables])
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Datasets produto", int((status["status"] == "ok").sum()))
+    c2.metric("Municipios base", len(df_mun))
+    c3.metric("Pendencias", int((status["status"] != "ok").sum()))
+    st.dataframe(status, use_container_width=True, hide_index=True)
+
+    scores = _repo_table(repo, "mart_score_alocacao_modular")
+    recommendations = _repo_table(repo, "mart_recomendacao_alocacao")
+    ranking = build_ranking_snapshot(scores, recommendations) if not scores.empty else pd.DataFrame()
+    if ranking.empty:
+        st.info("Not found in repo: ranking atualizado")
+    else:
+        st.markdown("#### Ranking atualizado")
+        st.dataframe(ranking.head(50), use_container_width=True, hide_index=True)
+
+    tempo = _repo_table(repo, "dim_tempo")
+    if not tempo.empty:
+        st.markdown("#### Dimensao temporal")
+        st.dataframe(tempo.head(20), use_container_width=True, hide_index=True)

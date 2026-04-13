@@ -113,6 +113,27 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
                 },
             ]
         ).to_csv(seade_path, index=False)
+        social_path = raw_dir / "social_ads_engajamento.csv"
+        pd.DataFrame(
+            [
+                {"codigo_ibge": "3550308", "ads_spend": 12000, "engajamento": 0.12, "impressoes": 900000},
+                {"codigo_ibge": "3509502", "ads_spend": 5000, "engajamento": 0.09, "impressoes": 240000},
+            ]
+        ).to_csv(social_path, index=False)
+        meta_ads_path = raw_dir / "meta_ads_pago.csv"
+        pd.DataFrame(
+            [
+                {"codigo_ibge": "3550308", "plataforma": "meta_ads", "campanha_id": "m1", "campanha_nome": "Emprego SP", "criativo": "video emprego", "mensagem": "Mais emprego e renda para o futuro das familias", "gasto": 1000, "impressoes": 10000, "cliques": 500, "conversao": 25, "ano": 2026, "mes": 8},
+                {"codigo_ibge": "3509502", "plataforma": "meta_ads", "campanha_id": "m2", "campanha_nome": "Saude Campinas", "criativo": "card saude", "mensagem": "Saude com hospital melhor e medico perto", "gasto": 600, "impressoes": 8000, "cliques": 320, "conversao": 12, "ano": 2026, "mes": 8},
+            ]
+        ).to_csv(meta_ads_path, index=False)
+        google_ads_path = raw_dir / "google_ads_pago.csv"
+        pd.DataFrame(
+            [
+                {"codigo_ibge": "3550308", "platform": "google_ads", "campaign_id": "g1", "campaign_name": "Seguranca SP", "creative_name": "search seguranca", "ad_text": "Seguranca para proteger sua familia da violencia", "cost": 500, "impressions": 5000, "clicks": 100, "conversions": 10, "ano": 2026, "mes": 8},
+                {"codigo_ibge": "3509502", "platform": "google_ads", "campaign_id": "g2", "campaign_name": "Educacao Campinas", "creative_name": "search educacao", "ad_text": "Educacao e creche para cuidar das criancas", "cost": 300, "impressions": 2000, "clicks": 80, "conversions": 4, "ano": 2026, "mes": 8},
+            ]
+        ).to_csv(google_ads_path, index=False)
         fiscal_path = raw_dir / "transparencia_transferencias_emendas.csv"
         pd.DataFrame(
             [
@@ -160,6 +181,9 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
                 secao_csv_path=secao_path,
                 ibge_csv_path=ibge_path,
                 seade_csv_path=seade_path,
+                social_csv_path=social_path,
+                meta_ads_csv_path=meta_ads_path,
+                google_ads_csv_path=google_ads_path,
                 fiscal_csv_path=fiscal_path,
                 window_cycles=3,
             ),
@@ -181,16 +205,26 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         assert mart_manifest["versao_parser"] == "medallion_test"
         assert "dim_territorio" in dataset_manifests
         assert "dim_tempo" in dataset_manifests
+        assert "mart_social_ads_engajamento" in dataset_manifests
+        assert "mart_midia_paga_municipio" in dataset_manifests
+        assert "mart_social_mensagem_territorial" in dataset_manifests
+        assert "mart_social_canal_regiao" in dataset_manifests
+        assert "mart_score_alocacao_modular" in dataset_manifests
+        assert "mart_simulacao_orcamento" in dataset_manifests
+        assert "mart_recomendacao_alocacao" in dataset_manifests
         assert "bronze" in manifest["layers"]
         assert "silver" in manifest["layers"]
         assert "gold" in manifest["layers"]
-        assert len(manifest["layers"]["bronze"]["assets"]) == 7
+        assert len(manifest["layers"]["bronze"]["assets"]) == 10
         assert manifest["layers"]["gold"]["aggregation_level"] == "municipio"
         assert manifest["layers"]["gold"]["window_cycles"] == 3
         assert "serving" in manifest["layers"]
         assert "contracts" in manifest["layers"]
         assert "quality_metrics" in manifest["layers"]
         assert "matching" in manifest["layers"]
+        assert "allocation" in manifest["layers"]
+        assert manifest["layers"]["allocation"]["budget_simulado"] == 50000.0
+        assert "risco" in manifest["layers"]["allocation"]["score_components"]
         assert "lgpd" in manifest["layers"]
         assert "join_success_pct" in manifest["layers"]["quality_metrics"]
         assert "null_critical_pct" in manifest["layers"]["quality_metrics"]
@@ -211,10 +245,19 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         dim_tempo = pd.read_parquet(published["dim_tempo"])
         mart_custo = pd.read_parquet(published["mart_custo_mobilizacao"])
         mart_sensibilidade = pd.read_parquet(published["mart_sensibilidade_investimento_publico"])
+        mart_midia_paga = pd.read_parquet(published["mart_midia_paga_municipio"])
+        mart_social_msg = pd.read_parquet(published["mart_social_mensagem_territorial"])
+        mart_social_canal = pd.read_parquet(published["mart_social_canal_regiao"])
+        mart_score_alocacao = pd.read_parquet(published["mart_score_alocacao_modular"])
+        mart_simulacao = pd.read_parquet(published["mart_simulacao_orcamento"])
+        mart_recomendacao = pd.read_parquet(published["mart_recomendacao_alocacao"])
+        fact_social = pd.read_parquet(manifest["layers"]["silver"]["datasets"]["fact_social"])
 
         assert len(mart_municipio) == 2
         assert set(mart_municipio["municipio_id_ibge7"].tolist()) == {"3550308", "3509502"}
         assert "canonical_key" in mart_municipio.columns
+        assert {"coverage", "data_quality_score"}.issubset(mart_municipio.columns)
+        assert mart_municipio["data_quality_score"].between(0, 1).all()
         assert len(mart_tendencia) == 2
         assert "votos_validos_medio_3ciclos" in mart_tendencia.columns
         assert len(mart_contexto) == 2
@@ -222,6 +265,9 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         assert "territorio_id" in dim_territorio.columns
         assert "cod_tse_municipio" in dim_territorio.columns
         assert "cod_ibge_municipio" in dim_territorio.columns
+        assert {"cod_tse", "cod_ibge", "municipio", "zona", "secao", "geolocalizacao", "coverage", "data_quality_score"}.issubset(dim_territorio.columns)
+        assert dim_territorio["coverage"].between(0, 1).all()
+        assert dim_territorio["data_quality_score"].between(0, 1).all()
         assert "zona_eleitoral" in dim_territorio.columns
         assert "secao_eleitoral" in dim_territorio.columns
         assert "vigencia_inicio" in dim_territorio.columns
@@ -229,7 +275,7 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         assert any(str(v).startswith("mun:3550308") for v in dim_territorio["territorio_id"].tolist())
         assert any(str(v).startswith("zona:3550308:1") for v in dim_territorio["territorio_id"].tolist())
         assert any(str(v).startswith("secao:3550308:1:10") for v in dim_territorio["territorio_id"].tolist())
-        assert {"tempo_id", "data", "fase_calendario", "evento", "pulso_midia", "is_pulso_midia"}.issubset(dim_tempo.columns)
+        assert {"tempo_id", "data", "ano", "mes", "semana", "fase_eleitoral", "fase_calendario", "evento", "pulso_midia", "is_pulso_midia"}.issubset(dim_tempo.columns)
         assert set(["historico_eleitoral", "pre_campanha", "janela_campanha"]).issubset(set(dim_tempo["fase_calendario"].unique().tolist()))
         assert "eleicao_turno_1" in set(dim_tempo["evento"].dropna().tolist())
         assert dim_tempo.loc[dim_tempo["evento"] == "eleicao_turno_1", "pulso_midia"].iloc[0] == "alto"
@@ -249,6 +295,21 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         assert "ruralidade_pct" in mart_custo.columns
         assert len(mart_sensibilidade) == 2
         assert "sensibilidade_investimento_publico" in mart_sensibilidade.columns
+        assert {"gasto", "impressoes", "cliques", "ctr", "cpc", "conversao", "taxa_conversao"}.issubset(mart_midia_paga.columns)
+        assert set(mart_midia_paga["plataforma"].tolist()) >= {"meta_ads", "google_ads"}
+        assert mart_midia_paga["ctr"].between(0, 1).all()
+        assert mart_midia_paga["cpc"].ge(0).all()
+        assert {"territorio", "campanha", "gasto", "performance", "criativo", "mensagem", "tema", "emocao", "narrativa", "publico_alvo"}.issubset(fact_social.columns)
+        assert {"emprego_e_renda", "saude", "seguranca", "educacao"}.issubset(set(fact_social["tema"].tolist()))
+        assert {"municipio", "mensagem", "tema", "narrativa", "publico_alvo", "performance", "ranking_mensagem_cidade"}.issubset(mart_social_msg.columns)
+        assert mart_social_msg.groupby("municipio_id_ibge7")["ranking_mensagem_cidade"].min().eq(1).all()
+        assert {"regiao", "plataforma", "performance", "ranking_canal_regiao"}.issubset(mart_social_canal.columns)
+        assert mart_social_canal["ranking_canal_regiao"].min() == 1
+        assert {"score_potencial_eleitoral", "score_oportunidade", "score_eficiencia_midia", "score_custo", "score_risco", "score_alocacao", "roi_politico_estimado"}.issubset(mart_score_alocacao.columns)
+        assert mart_score_alocacao["score_alocacao"].between(0, 100).all()
+        assert round(float(mart_simulacao["verba_simulada"].sum()), 2) == 50000.00
+        assert {"ranking", "verba_sugerida", "canal_ideal", "mensagem_ideal", "justificativa"}.issubset(mart_recomendacao.columns)
+        assert mart_recomendacao["verba_sugerida"].sum() > 0
 
         latest_catalog = catalog_root / "datasets_latest.json"
         latest = json.loads(latest_catalog.read_text(encoding="utf-8"))
@@ -261,6 +322,20 @@ def test_medallion_pipeline_builds_bronze_silver_gold_and_marts():
         assert latest["mart_priorizacao_territorial_sp"]["dataset_version"] == result["run_id"]
         assert latest["mart_custo_mobilizacao"]["dataset_version"] == result["run_id"]
         assert latest["mart_sensibilidade_investimento_publico"]["dataset_version"] == result["run_id"]
+        assert latest["mart_social_ads_engajamento"]["dataset_version"] == result["run_id"]
+        assert latest["mart_midia_paga_municipio"]["dataset_version"] == result["run_id"]
+        assert latest["mart_social_mensagem_territorial"]["dataset_version"] == result["run_id"]
+        assert latest["mart_social_canal_regiao"]["dataset_version"] == result["run_id"]
+        assert latest["mart_score_alocacao_modular"]["dataset_version"] == result["run_id"]
+        assert latest["mart_simulacao_orcamento"]["dataset_version"] == result["run_id"]
+        assert latest["mart_recomendacao_alocacao"]["dataset_version"] == result["run_id"]
+        assert latest["features_eleitorais"]["dataset_version"] == result["run_id"]
+        assert latest["mart_municipio_eleitoral"]["quality"]["data_quality_score_avg"] > 0
+        feature_path = Path(result["features"]["feature_path"])
+        assert feature_path.exists()
+        features = pd.read_parquet(feature_path)
+        assert {"densidade_eleitoral", "volatilidade_historica", "crescimento_eleitoral", "abstencao", "competitividade"}.issubset(features.columns)
+        assert features["data_quality_score"].between(0, 1).all()
 
         lake_gold_dir = gold_root
         partition_sample = list(lake_gold_dir.glob("fonte=mart_municipio_eleitoral/ano=*/uf=*/part-*.parquet"))

@@ -11,6 +11,7 @@ import pandas as pd
 
 from config.settings import AppPaths
 from domain.open_data_contracts import validate_municipio_dimension, validate_municipio_enriched
+from infrastructure.data_quality import apply_row_quality_scores
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.load_manifest import build_load_manifest
 from infrastructure.territory_matching import build_alias_dimension, layered_match_territory
@@ -188,6 +189,11 @@ def _enrich_base(base_df: pd.DataFrame, dim_municipio: pd.DataFrame, dim_alias: 
         merged = merged.merge(socio_df, on="codigo_ibge", how="left", suffixes=("", "_socio"))
     merged["join_confidence"] = pd.to_numeric(merged.get("join_confidence"), errors="coerce")
     merged["canonical_key"] = merged.apply(_build_canonical_key, axis=1)
+    merged = apply_row_quality_scores(
+        merged,
+        critical_columns=["municipio_id_ibge7", "ano", "turno", "canonical_key", "ranking_final"],
+        source_columns=["municipio_id_ibge7", "codigo_tse", "codigo_ibge", "idhm"],
+    )
     merged = validate_municipio_enriched(merged)
     merged.attrs["review_queue_df"] = match_result.review_queue_df
     return merged
@@ -312,4 +318,3 @@ def run_open_data_crosswalk_pipeline(
         "dim_municipio_path": str(dim_path),
         "join_rate": join_rate,
     }
-

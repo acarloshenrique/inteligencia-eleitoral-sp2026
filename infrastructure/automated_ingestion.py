@@ -36,10 +36,11 @@ ROLE_DOMAIN_DEFAULTS = {
     "ibge_csv": "socioeconomico",
     "seade_csv": "territorial",
     "social_csv": "midia_e_social",
+    "meta_ads_csv": "midia_e_social",
+    "google_ads_csv": "midia_e_social",
     "operacoes_csv": "operacoes_de_campanha",
     "fiscal_csv": "operacoes_de_campanha",
 }
-
 
 @dataclass(frozen=True)
 class IngestionAssetSpec:
@@ -270,6 +271,9 @@ def run_automated_ingestion(
                 secao_csv_path=role_paths.get("secao_csv"),
                 ibge_csv_path=role_paths.get("ibge_csv"),
                 seade_csv_path=role_paths.get("seade_csv"),
+                social_csv_path=role_paths.get("social_csv"),
+                meta_ads_csv_path=role_paths.get("meta_ads_csv"),
+                google_ads_csv_path=role_paths.get("google_ads_csv"),
                 fiscal_csv_path=role_paths.get("fiscal_csv"),
             ),
             pipeline_version=selected_version,

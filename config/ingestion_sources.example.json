@@ -1,22 +1,38 @@
 {
   "pipeline": "medallion",
-  "pipeline_version": "medallion_v1",
+  "pipeline_version": "medallion_v2_governed_lake",
   "domains": [
     {
       "domain": "eleitoral_oficial",
       "assets": [
         {
-          "name": "base_eleitoral_remoto",
+          "name": "tse_eleitorado_municipio",
           "role": "base_parquet",
-          "url": "https://example.com/df_mun_latest.parquet",
-          "file_name": "df_mun_latest.parquet",
+          "url": "https://example.com/tse/eleitorado_sp.parquet",
+          "file_name": "tse_eleitorado_sp.parquet",
           "format": "parquet",
           "required": true
         },
         {
+          "name": "tse_resultados_secao",
+          "role": "secao_csv",
+          "url": "https://example.com/tse/resultados_secao_sp.csv",
+          "file_name": "tse_resultados_secao_sp.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "tse_candidaturas",
+          "role": "candidaturas_csv",
+          "url": "https://example.com/tse/candidaturas_sp.csv",
+          "file_name": "tse_candidaturas_sp.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
           "name": "mapping_tse_ibge",
           "role": "mapping_csv",
-          "url": "https://example.com/municipios_tse_ibge.csv",
+          "url": "https://example.com/territorio/municipios_tse_ibge.csv",
           "file_name": "municipios_tse_ibge.csv",
           "format": "csv",
           "required": true
@@ -27,10 +43,10 @@
       "domain": "socioeconomico",
       "assets": [
         {
-          "name": "indicadores_socio",
-          "role": "socio_csv",
-          "url": "https://example.com/indicadores_municipais.csv",
-          "file_name": "indicadores_municipais.csv",
+          "name": "ibge_indicadores_municipais",
+          "role": "ibge_csv",
+          "url": "https://example.com/ibge/indicadores_municipais_sp.csv",
+          "file_name": "ibge_indicadores_municipais_sp.csv",
           "format": "csv",
           "required": false
         }
@@ -40,10 +56,10 @@
       "domain": "territorial",
       "assets": [
         {
-          "name": "indicadores_territoriais",
+          "name": "seade_indicadores_sp",
           "role": "seade_csv",
-          "url": "https://example.com/seade_ipvs_emprego_saude.csv",
-          "file_name": "seade_ipvs_emprego_saude.csv",
+          "url": "https://example.com/seade/ipvs_emprego_saude_sp.csv",
+          "file_name": "seade_ipvs_emprego_saude_sp.csv",
           "format": "csv",
           "required": false
         }
@@ -53,23 +69,26 @@
       "domain": "midia_e_social",
       "assets": [
         {
-          "name": "social_listening_municipios",
+          "name": "social_ads_engajamento",
           "role": "social_csv",
-          "url": "https://example.com/social_listening_municipios.csv",
-          "file_name": "social_listening_municipios.csv",
+          "url": "https://example.com/social/ads_engajamento_municipio_sp.csv",
+          "file_name": "social_ads_engajamento_municipio_sp.csv",
           "format": "csv",
           "required": false
-        }
-      ]
-    },
-    {
-      "domain": "operacoes_de_campanha",
-      "assets": [
+        },
         {
-          "name": "operacoes_campo",
-          "role": "operacoes_csv",
-          "url": "https://example.com/operacoes_campo.csv",
-          "file_name": "operacoes_campo.csv",
+          "name": "meta_ads_pago",
+          "role": "meta_ads_csv",
+          "url": "https://example.com/meta/ads_pago_municipio_sp.csv",
+          "file_name": "meta_ads_pago_municipio_sp.csv",
+          "format": "csv",
+          "required": false
+        },
+        {
+          "name": "google_ads_pago",
+          "role": "google_ads_csv",
+          "url": "https://example.com/google/ads_pago_municipio_sp.csv",
+          "file_name": "google_ads_pago_municipio_sp.csv",
           "format": "csv",
           "required": false
         }

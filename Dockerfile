@@ -6,12 +6,12 @@ ENV PIP_NO_CACHE_DIR=1 \
 
 WORKDIR /app
 
-# Dependências do sistema
+# Dependencias do sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Dependências Python
+# Dependencias Python
 COPY requirements.in requirements.txt ./
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
@@ -40,7 +40,11 @@ COPY app.py healthcheck.py ./
 
 RUN mkdir -p /app/data/outputs/estado_sessao \
     /app/data/outputs/relatorios \
-    /app/data/chromadb \
+    /app/data/chromadb \\
+    /app/data/data_lake/bronze \\
+    /app/data/data_lake/silver \\
+    /app/data/data_lake/gold \\
+    /app/data/data_lake/catalog \\
     /tmp/inteligencia_eleitoral/relatorios \
     && chown -R app:app /app /tmp/inteligencia_eleitoral /home/app
 

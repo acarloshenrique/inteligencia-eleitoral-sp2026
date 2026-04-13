@@ -45,3 +45,20 @@ class FiscalRow(BaseModel):
     ano: int | None = None
     transferencias: float | None = Field(default=None, ge=0)
     emendas: float | None = Field(default=None, ge=0)
+
+class PaidMediaAdsRow(BaseModel):
+    codigo_ibge: str | int = Field()
+    plataforma: str | None = None
+    gasto: float | None = Field(default=None, ge=0)
+    ads_spend: float | None = Field(default=None, ge=0)
+    impressoes: float | None = Field(default=None, ge=0)
+    impressions: float | None = Field(default=None, ge=0)
+    cliques: float | None = Field(default=None, ge=0)
+    clicks: float | None = Field(default=None, ge=0)
+    ctr: float | None = Field(default=None, ge=0)
+    cpc: float | None = Field(default=None, ge=0)
+    conversao: float | None = Field(default=None, ge=0)
+    conversoes: float | None = Field(default=None, ge=0)
+    conversions: float | None = Field(default=None, ge=0)
+    ano: int | None = None
+    mes: int | None = None
