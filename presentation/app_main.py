@@ -81,4 +81,4 @@ def run_app():
     with t4:
         render_tab_simulacao(repo)
     with t5:
-        render_tab_monitoramento(repo, df_mun)
+        render_tab_monitoramento(repo, df_mun, paths)

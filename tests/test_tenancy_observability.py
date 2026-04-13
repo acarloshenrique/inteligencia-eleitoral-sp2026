@@ -4,7 +4,8 @@ import pytest
 
 from config.settings import Settings
 from infrastructure.metadata_db import MetadataDb
-from infrastructure.observability import AlertThresholds, OperationObserver, build_observability_snapshot
+from infrastructure.notifiers import NotificationResult
+from infrastructure.observability import AlertThresholds, OperationObserver, build_observability_snapshot, evaluate_and_dispatch_alerts
 from infrastructure.operation_scheduler import build_default_schedule, load_schedule_manifest, write_schedule_manifest
 from infrastructure.tenancy import ensure_tenant_path, normalize_tenant_id
 
@@ -79,3 +80,48 @@ def test_schedule_manifest_contains_daily_weekly_and_alerts(tmp_path):
     names = {item["name"] for item in payload["pipelines"]}
     assert payload["tenant_id"] == "cliente-a"
     assert names == {"ingestao_diaria", "atualizacao_semanal_gold", "alertas_operacionais"}
+
+
+def test_alert_evaluation_persists_and_sends(tmp_path):
+    db = MetadataDb(tmp_path / "metadata" / "jobs.sqlite3")
+    db.record_operational_event(
+        tenant_id="cliente-a",
+        event_type="job.ingest",
+        resource="ingest-1",
+        status="failed",
+        latency_ms=5000,
+        cost_usd=12,
+        error_text="fonte indisponivel",
+    )
+    sent: list[dict] = []
+
+    def sender(alert):
+        sent.append(alert)
+        return [NotificationResult(channel="webhook", ok=True, detail="sent")]
+
+    alerts = evaluate_and_dispatch_alerts(
+        db,
+        tenant_id="cliente-a",
+        thresholds=AlertThresholds(error_rate=0.01, latency_p95_ms=1000, daily_cost_usd=1),
+        settings=object(),
+        sender=sender,
+    )
+
+    persisted = db.list_alerts(tenant_id="cliente-a")
+    assert len(sent) == 3
+    assert len(alerts) == 3
+    assert {item["status"] for item in persisted} == {"sent"}
+    assert all(item["channels"] == ["webhook"] for item in persisted)
+
+
+def test_metadata_db_lists_jobs_events_and_alerts(tmp_path):
+    db = MetadataDb(tmp_path / "metadata" / "jobs.sqlite3")
+    db.create_job("job-1", "ingest", {"x": 1}, tenant_id="cliente-a")
+    db.set_error("job-1", "boom")
+    db.record_operational_event(tenant_id="cliente-a", event_type="job.ingest", resource="job-1", status="failed", error_text="boom")
+    alert_id = db.record_alert(tenant_id="cliente-a", severity="high", metric="error_rate", value=1, threshold=0.1, message="erro")
+    db.set_alert_status(alert_id, status="sent", channels=["webhook"])
+
+    assert db.list_jobs(tenant_id="cliente-a", limit=1)[0]["status"] == "failed"
+    assert db.list_operational_events(tenant_id="cliente-a", limit=1)[0]["event_type"] == "job.ingest"
+    assert db.list_alerts(tenant_id="cliente-a", limit=1)[0]["channels"] == ["webhook"]

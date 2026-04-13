@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 import pandas as pd
 
 from config.settings import AppPaths, get_settings
@@ -53,6 +55,30 @@ def is_within_gold_layer(paths: AppPaths, path) -> bool:
     return any(candidate == root or root in candidate.parents for root in allowed_roots)
 
 
+def validate_prod_runtime_hardening(settings, paths: AppPaths) -> list[str]:
+    if settings.app_env != "prod":
+        return []
+
+    erros: list[str] = []
+    parsed_redis = urlparse(settings.redis_url)
+    redis_has_tls = parsed_redis.scheme == "rediss"
+    redis_has_auth = bool(parsed_redis.password)
+    if settings.require_redis_tls_in_prod and not redis_has_tls:
+        erros.append("APP_ENV=prod exige Redis com TLS: use REDIS_URL rediss://...")
+    if settings.require_redis_auth_in_prod and not redis_has_auth:
+        erros.append("APP_ENV=prod exige Redis com senha em REDIS_URL.")
+
+    backend = str(settings.chroma_vector_backend).lower()
+    if backend == "local" and not settings.chroma_allow_shared_volume:
+        if paths.tenant_id == "default":
+            erros.append("APP_ENV=prod exige TENANT_ID dedicado ou CHROMA_VECTOR_BACKEND=external para ChromaDB.")
+        tenant_root = paths.tenant_root.resolve() if paths.tenant_root else None
+        chroma_path = paths.chromadb_path.resolve()
+        if tenant_root is None or not (chroma_path == tenant_root or tenant_root in chroma_path.parents):
+            erros.append("APP_ENV=prod exige volume ChromaDB isolado dentro do tenant.")
+    return erros
+
+
 def persistir_relatorio(paths: AppPaths, df, nome_arquivo):
     alvos = [paths.gold_reports_root, paths.runtime_reports_root]
     ultimo_erro = None
@@ -75,6 +101,8 @@ def bootstrap_ambiente(paths: AppPaths):
     app_env = settings.app_env
     require_data = settings.require_data
     require_groq = settings.require_groq_api_key
+
+    erros.extend(validate_prod_runtime_hardening(settings, paths))
 
     if require_groq and not settings.groq_api_key:
         erros.append("REQUIRE_GROQ_API_KEY=true, mas GROQ_API_KEY nao foi definida.")

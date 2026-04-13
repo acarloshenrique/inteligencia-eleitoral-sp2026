@@ -84,6 +84,21 @@ class Settings(BaseSettings):
     ops_alert_error_rate_threshold: float = Field(default=0.10, alias="OPS_ALERT_ERROR_RATE_THRESHOLD")
     ops_alert_latency_p95_ms: float = Field(default=30000.0, alias="OPS_ALERT_LATENCY_P95_MS")
     ops_alert_daily_cost_usd: float = Field(default=50.0, alias="OPS_ALERT_DAILY_COST_USD")
+    ops_alert_webhook_url: str = Field(default="", alias="OPS_ALERT_WEBHOOK_URL")
+    ops_alert_slack_webhook_url: str = Field(default="", alias="OPS_ALERT_SLACK_WEBHOOK_URL")
+    ops_alert_teams_webhook_url: str = Field(default="", alias="OPS_ALERT_TEAMS_WEBHOOK_URL")
+    ops_alert_email_enabled: bool = Field(default=False, alias="OPS_ALERT_EMAIL_ENABLED")
+    ops_alert_email_from: str = Field(default="", alias="OPS_ALERT_EMAIL_FROM")
+    ops_alert_email_to: str = Field(default="", alias="OPS_ALERT_EMAIL_TO")
+    ops_alert_smtp_host: str = Field(default="", alias="OPS_ALERT_SMTP_HOST")
+    ops_alert_smtp_port: int = Field(default=587, alias="OPS_ALERT_SMTP_PORT")
+    ops_alert_smtp_username: str = Field(default="", alias="OPS_ALERT_SMTP_USERNAME")
+    ops_alert_smtp_password: str = Field(default="", alias="OPS_ALERT_SMTP_PASSWORD")
+    ops_alert_smtp_tls: bool = Field(default=True, alias="OPS_ALERT_SMTP_TLS")
+    require_redis_tls_in_prod: bool = Field(default=True, alias="REQUIRE_REDIS_TLS_IN_PROD")
+    require_redis_auth_in_prod: bool = Field(default=True, alias="REQUIRE_REDIS_AUTH_IN_PROD")
+    chroma_vector_backend: str = Field(default="local", alias="CHROMA_VECTOR_BACKEND")
+    chroma_allow_shared_volume: bool = Field(default=False, alias="CHROMA_ALLOW_SHARED_VOLUME")
     lgpd_anonymization_salt: str = Field(default="change-me", alias="LGPD_ANONYMIZATION_SALT")
 
     @field_validator("app_env", mode="before")
@@ -119,6 +134,15 @@ class Settings(BaseSettings):
         if day not in allowed:
             raise ValueError("OPS_WEEKLY_UPDATE_DAY invalido")
         return day
+
+    @field_validator("chroma_vector_backend", mode="before")
+    @classmethod
+    def validate_chroma_backend(cls, value):
+        backend = str(value or "local").strip().lower()
+        allowed = {"local", "external"}
+        if backend not in allowed:
+            raise ValueError("CHROMA_VECTOR_BACKEND invalido. Use: local ou external.")
+        return backend
 
     def resolved_data_root(self):
         if self.data_root:

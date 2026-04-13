@@ -1,10 +1,16 @@
 from datetime import datetime
+import logging
 
 import pandas as pd
 import streamlit as st
 
 from config.settings import get_settings
+from infrastructure.metadata_db import MetadataDb
+from infrastructure.observability import AlertThresholds, build_observability_snapshot
 from domain.constants import TETOS
+
+
+logger = logging.getLogger(__name__)
 
 
 def render_sidebar(bootstrap, chromadb_path, repo):
@@ -471,8 +477,76 @@ def render_tab_simulacao(repo):
     c3.download_button("Ranking atualizado", data=exports["ranking_csv_bytes"], file_name=f"ranking_atualizado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv", use_container_width=True)
 
 
-def render_tab_monitoramento(repo, df_mun):
+def _settings_thresholds(settings) -> AlertThresholds:
+    return AlertThresholds(
+        error_rate=float(getattr(settings, "ops_alert_error_rate_threshold", 0.10)),
+        latency_p95_ms=float(getattr(settings, "ops_alert_latency_p95_ms", 30000.0)),
+        daily_cost_usd=float(getattr(settings, "ops_alert_daily_cost_usd", 50.0)),
+    )
+
+
+def _render_operational_dashboard(paths) -> None:
+    settings = get_settings()
+    db = MetadataDb(paths.metadata_db_path)
+    tenant_id = getattr(paths, "tenant_id", getattr(settings, "tenant_id", "default"))
+    snapshot = build_observability_snapshot(db, tenant_id=tenant_id, thresholds=_settings_thresholds(settings), limit=500)
+    summary = snapshot["summary"]
+
+    st.markdown("#### Operacao")
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("Jobs", int(summary.get("jobs_total", 0)))
+    m2.metric("Erros", int(summary.get("errors_total", 0)))
+    m3.metric("Latencia p95", f"{float(summary.get('latency_p95_ms', 0.0)):.0f} ms")
+    m4.metric("Custo", f"US$ {float(summary.get('cost_total_usd', 0.0)):.2f}")
+    m5.metric("Uso", int(summary.get("usage_total", 0)))
+
+    active_alerts = snapshot.get("alerts", [])
+    persisted_alerts = db.list_alerts(tenant_id=tenant_id, limit=25)
+    if active_alerts:
+        st.error(f"{len(active_alerts)} alerta(s) operacional(is) ativo(s).")
+    elif persisted_alerts:
+        st.info("Sem alerta ativo pelos thresholds atuais. Historico recente abaixo.")
+    else:
+        st.success("Sem alertas operacionais recentes.")
+
+    events = pd.DataFrame(db.list_operational_events(tenant_id=tenant_id, limit=100))
+    jobs = pd.DataFrame(db.list_jobs(tenant_id=tenant_id, limit=50))
+    alerts = pd.DataFrame(persisted_alerts)
+
+    if not events.empty:
+        failed_ingestion = events[
+            (events["status"] == "failed")
+            & (events["event_type"].astype(str).str.contains("ingest", case=False, na=False)
+               | events["resource"].astype(str).str.contains("ingest", case=False, na=False))
+        ]
+        if not failed_ingestion.empty:
+            st.markdown("#### Falhas de ingestao")
+            cols = _display_columns(failed_ingestion, ["created_at_utc", "event_type", "resource", "error", "latency_ms", "cost_usd"])
+            st.dataframe(failed_ingestion[cols].head(20), use_container_width=True, hide_index=True)
+
+        st.markdown("#### Eventos operacionais")
+        cols = _display_columns(events, ["created_at_utc", "event_type", "resource", "status", "latency_ms", "cost_usd", "usage_count", "error"])
+        st.dataframe(events[cols].head(50), use_container_width=True, hide_index=True)
+    else:
+        st.info("Not found in repo: eventos operacionais ainda nao registrados.")
+
+    if not jobs.empty:
+        st.markdown("#### Jobs")
+        cols = _display_columns(jobs, ["updated_at_utc", "id", "job_type", "status", "error", "latency_ms", "cost_usd"])
+        st.dataframe(jobs[cols].head(50), use_container_width=True, hide_index=True)
+
+    if not alerts.empty:
+        st.markdown("#### Alertas enviados/persistidos")
+        cols = _display_columns(alerts, ["created_at_utc", "severity", "metric", "value", "threshold", "status", "channels", "message", "error"])
+        st.dataframe(alerts[cols].head(25), use_container_width=True, hide_index=True)
+
+
+def render_tab_monitoramento(repo, df_mun, paths=None):
     st.markdown("### Monitoramento")
+    if paths is None:
+        paths = get_settings().build_paths()
+    _render_operational_dashboard(paths)
+    st.divider()
     tables = [
         "mart_score_alocacao_modular",
         "mart_recomendacao_alocacao",

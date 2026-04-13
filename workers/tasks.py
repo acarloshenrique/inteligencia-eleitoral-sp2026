@@ -13,7 +13,7 @@ from infrastructure.data_pipeline import run_versioned_data_pipeline
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.env import is_within_gold_layer
 from infrastructure.metadata_db import MetadataDb
-from infrastructure.observability import OperationObserver
+from infrastructure.observability import AlertThresholds, OperationObserver, evaluate_and_dispatch_alerts
 from infrastructure.secret_factory import build_secret_provider
 from infrastructure.vector_index_job import run_vector_reindex_job
 
@@ -22,6 +22,18 @@ def _metadata_db() -> MetadataDb:
     settings = get_settings()
     paths = settings.build_paths()
     return MetadataDb(paths.metadata_db_path)
+
+
+def _alert_thresholds(settings) -> AlertThresholds:
+    return AlertThresholds(
+        error_rate=float(getattr(settings, "ops_alert_error_rate_threshold", 0.10)),
+        latency_p95_ms=float(getattr(settings, "ops_alert_latency_p95_ms", 30000.0)),
+        daily_cost_usd=float(getattr(settings, "ops_alert_daily_cost_usd", 50.0)),
+    )
+
+
+def _evaluate_job_alerts(db: MetadataDb, settings, tenant_id: str) -> None:
+    evaluate_and_dispatch_alerts(db, tenant_id=tenant_id, thresholds=_alert_thresholds(settings), settings=settings)
 
 
 def _artifact_store():
@@ -61,6 +73,7 @@ def run_reindex_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return result
     except Exception as e:
         db.set_error(job_id, str(e))
+        _evaluate_job_alerts(db, settings, tenant_id)
         raise
 
 
@@ -112,6 +125,7 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return result
     except Exception as e:
         db.set_error(job_id, str(e))
+        _evaluate_job_alerts(db, settings, tenant_id)
         raise
 
 def run_ingestion_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -138,4 +152,5 @@ def run_ingestion_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return result
     except Exception as e:
         db.set_error(job_id, str(e))
+        _evaluate_job_alerts(db, settings, tenant_id)
         raise

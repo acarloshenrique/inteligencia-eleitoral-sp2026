@@ -11,7 +11,7 @@ from api.security import AuthContext, audit_metadata_from_request, require_roles
 from config.settings import get_settings
 from infrastructure.env import is_within_gold_layer
 from infrastructure.metadata_db import MetadataDb
-from infrastructure.observability import AlertThresholds, build_observability_snapshot
+from infrastructure.observability import AlertThresholds, build_observability_snapshot, evaluate_and_dispatch_alerts
 from infrastructure.operation_scheduler import build_default_schedule, write_schedule_manifest
 from infrastructure.queue_rq import get_queue
 
@@ -212,6 +212,32 @@ def get_observability(
         daily_cost_usd=float(getattr(settings, "ops_alert_daily_cost_usd", 50.0)),
     )
     return build_observability_snapshot(db, tenant_id=tenant_id, thresholds=thresholds, limit=limit)
+
+
+@app.post("/v1/ops/alerts/evaluate")
+def evaluate_ops_alerts(
+    request: Request,
+    limit: int = 500,
+    auth: AuthContext = Depends(require_roles("admin", "operator")),
+):
+    settings = get_settings()
+    tenant_id = _tenant_id()
+    db = _metadata_db()
+    db.log_audit(
+        actor=auth.actor,
+        role=auth.role,
+        action="evaluate_ops_alerts",
+        resource="alerts",
+        metadata={**audit_metadata_from_request(request), "limit": int(limit), "token_fp": auth.token_fingerprint},
+        tenant_id=tenant_id,
+    )
+    thresholds = AlertThresholds(
+        error_rate=float(getattr(settings, "ops_alert_error_rate_threshold", 0.10)),
+        latency_p95_ms=float(getattr(settings, "ops_alert_latency_p95_ms", 30000.0)),
+        daily_cost_usd=float(getattr(settings, "ops_alert_daily_cost_usd", 50.0)),
+    )
+    alerts = evaluate_and_dispatch_alerts(db, tenant_id=tenant_id, thresholds=thresholds, settings=settings, limit=limit)
+    return {"tenant_id": tenant_id, "alerts": alerts}
 
 
 @app.post("/v1/ops/schedule")

@@ -75,6 +75,25 @@ class MetadataDb:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tenant_id TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    metric TEXT NOT NULL,
+                    value REAL NOT NULL,
+                    threshold REAL NOT NULL,
+                    message TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    channels_json TEXT,
+                    error_text TEXT,
+                    metadata_json TEXT,
+                    created_at_utc TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                )
+                """
+            )
             self._ensure_column(conn, "jobs", "tenant_id", "TEXT NOT NULL DEFAULT 'default'")
             self._ensure_column(conn, "jobs", "latency_ms", "REAL")
             self._ensure_column(conn, "jobs", "cost_usd", "REAL")
@@ -143,6 +162,39 @@ class MetadataDb:
             "latency_ms": row[9],
             "cost_usd": row[10],
         }
+
+    def list_jobs(self, *, tenant_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        where = "WHERE tenant_id = ?" if tenant_id else ""
+        params: tuple[Any, ...] = (tenant_id,) if tenant_id else ()
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT id, job_type, status, payload_json, result_json, error_text, created_at_utc, updated_at_utc, tenant_id, latency_ms, cost_usd
+                FROM jobs
+                {where}
+                ORDER BY updated_at_utc DESC
+                LIMIT ?
+                """,
+                (*params, int(limit)),
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            out.append(
+                {
+                    "id": row[0],
+                    "job_type": row[1],
+                    "status": row[2],
+                    "payload": json.loads(row[3]) if row[3] else {},
+                    "result": json.loads(row[4]) if row[4] else None,
+                    "error": row[5],
+                    "created_at_utc": row[6],
+                    "updated_at_utc": row[7],
+                    "tenant_id": row[8],
+                    "latency_ms": row[9],
+                    "cost_usd": row[10],
+                }
+            )
+        return out
 
     def log_audit(self, *, actor: str, role: str, action: str, resource: str, metadata: dict[str, Any] | None = None, tenant_id: str = "default") -> None:
         now = datetime.now(UTC).isoformat()
@@ -218,6 +270,135 @@ class MetadataDb:
                 ),
             )
 
+    def list_operational_events(self, *, tenant_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        where = "WHERE tenant_id = ?" if tenant_id else ""
+        params: tuple[Any, ...] = (tenant_id,) if tenant_id else ()
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT id, tenant_id, event_type, resource, status, latency_ms, cost_usd, usage_count, error_text, metadata_json, created_at_utc
+                FROM operational_events
+                {where}
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (*params, int(limit)),
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            out.append(
+                {
+                    "id": row[0],
+                    "tenant_id": row[1],
+                    "event_type": row[2],
+                    "resource": row[3],
+                    "status": row[4],
+                    "latency_ms": row[5],
+                    "cost_usd": row[6],
+                    "usage_count": row[7],
+                    "error": row[8],
+                    "metadata": json.loads(row[9]) if row[9] else {},
+                    "created_at_utc": row[10],
+                }
+            )
+        return out
+
+    def record_alert(
+        self,
+        *,
+        tenant_id: str,
+        severity: str,
+        metric: str,
+        value: float,
+        threshold: float,
+        message: str,
+        status: str = "new",
+        channels: list[str] | None = None,
+        error_text: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> int:
+        now = datetime.now(UTC).isoformat()
+        with self._conn() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO alerts
+                (tenant_id, severity, metric, value, threshold, message, status, channels_json, error_text, metadata_json, created_at_utc, updated_at_utc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tenant_id,
+                    severity,
+                    metric,
+                    float(value),
+                    float(threshold),
+                    message,
+                    status,
+                    json.dumps(channels or [], ensure_ascii=False),
+                    error_text,
+                    json.dumps(metadata or {}, ensure_ascii=False),
+                    now,
+                    now,
+                ),
+            )
+            return int(cur.lastrowid)
+
+    def set_alert_status(
+        self,
+        alert_id: int,
+        *,
+        status: str,
+        channels: list[str] | None = None,
+        error_text: str | None = None,
+    ) -> None:
+        now = datetime.now(UTC).isoformat()
+        with self._conn() as conn:
+            conn.execute(
+                """
+                UPDATE alerts
+                SET status = ?,
+                    channels_json = COALESCE(?, channels_json),
+                    error_text = ?,
+                    updated_at_utc = ?
+                WHERE id = ?
+                """,
+                (status, json.dumps(channels, ensure_ascii=False) if channels is not None else None, error_text, now, int(alert_id)),
+            )
+
+    def list_alerts(self, *, tenant_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        where = "WHERE tenant_id = ?" if tenant_id else ""
+        params: tuple[Any, ...] = (tenant_id,) if tenant_id else ()
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT id, tenant_id, severity, metric, value, threshold, message, status, channels_json, error_text, metadata_json, created_at_utc, updated_at_utc
+                FROM alerts
+                {where}
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (*params, int(limit)),
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            out.append(
+                {
+                    "id": row[0],
+                    "tenant_id": row[1],
+                    "severity": row[2],
+                    "metric": row[3],
+                    "value": row[4],
+                    "threshold": row[5],
+                    "message": row[6],
+                    "status": row[7],
+                    "channels": json.loads(row[8]) if row[8] else [],
+                    "error": row[9],
+                    "metadata": json.loads(row[10]) if row[10] else {},
+                    "created_at_utc": row[11],
+                    "updated_at_utc": row[12],
+                }
+            )
+        return out
+
     def summarize_operations(self, *, tenant_id: str | None = None, limit: int = 500) -> dict[str, Any]:
         where = "WHERE tenant_id = ?" if tenant_id else ""
         params: tuple[Any, ...] = (tenant_id,) if tenant_id else ()
@@ -250,9 +431,9 @@ class MetadataDb:
 
     def purge_older_than_days(self, days: int) -> dict[str, int]:
         cutoff_dt = datetime.now(UTC).timestamp() - max(1, days) * 86400
-        removed = {"jobs": 0, "audit_events": 0, "operational_events": 0}
+        removed = {"jobs": 0, "audit_events": 0, "operational_events": 0, "alerts": 0}
         with self._conn() as conn:
-            # timestamps são ISO UTC; comparação textual funciona para esse formato.
+            # timestamps sao ISO UTC; comparacao textual funciona para esse formato.
             cutoff_iso = datetime.fromtimestamp(cutoff_dt, UTC).isoformat()
             cur = conn.execute("DELETE FROM jobs WHERE created_at_utc < ?", (cutoff_iso,))
             removed["jobs"] = cur.rowcount if cur.rowcount is not None else 0
@@ -260,4 +441,6 @@ class MetadataDb:
             removed["audit_events"] = cur2.rowcount if cur2.rowcount is not None else 0
             cur3 = conn.execute("DELETE FROM operational_events WHERE created_at_utc < ?", (cutoff_iso,))
             removed["operational_events"] = cur3.rowcount if cur3.rowcount is not None else 0
+            cur4 = conn.execute("DELETE FROM alerts WHERE created_at_utc < ?", (cutoff_iso,))
+            removed["alerts"] = cur4.rowcount if cur4.rowcount is not None else 0
         return removed
