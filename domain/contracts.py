@@ -1,4 +1,5 @@
 from typing import Literal
+import unicodedata
 
 import pandas as pd
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -8,6 +9,20 @@ from domain.constants import ALOC_COLS
 
 class DataContractError(ValueError):
     pass
+
+
+def _normalize_cluster_label(value: str) -> str:
+    text = str(value)
+    for _ in range(2):
+        try:
+            repaired = text.encode("latin1").decode("utf-8")
+        except UnicodeError:
+            break
+        if repaired == text:
+            break
+        text = repaired
+    normalized = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
 
 
 class MunicipioInputRow(BaseModel):
@@ -21,8 +36,9 @@ class MunicipioInputRow(BaseModel):
     @field_validator("cluster")
     @classmethod
     def validate_cluster(cls, value: str) -> str:
-        allowed = {"Diamante", "Alavanca", "Consolidacao", "Consolidação", "ConsolidaÃ§Ã£o", "Descarte"}
-        if value not in allowed:
+        allowed = {"Diamante", "Alavanca", "Consolidacao", "Descarte"}
+        normalized = _normalize_cluster_label(value)
+        if normalized not in allowed:
             raise ValueError("cluster invalido para contrato de entrada")
         return value
 
