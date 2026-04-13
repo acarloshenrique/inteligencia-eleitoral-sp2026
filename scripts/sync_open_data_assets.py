@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 from config.settings import get_settings
 from infrastructure.open_data_sources import OpenDataAsset, download_asset_incremental

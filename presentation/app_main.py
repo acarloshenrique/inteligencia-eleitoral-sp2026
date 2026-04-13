@@ -1,7 +1,7 @@
 ﻿import streamlit as st
 from pydantic import ValidationError
 
-from application.use_cases_layered import executar_alocacao, responder_pergunta
+from application.use_cases_layered import executar_alocacao
 from config.settings import get_settings
 from domain.contracts import DataContractError
 from domain.errors import AppError
@@ -10,15 +10,10 @@ from infrastructure.repositories import ChromaGroqAIService, DuckDBAnalyticsRepo
 from infrastructure.storage import carrega_dados, carrega_db
 from presentation.ui import (
     render_sidebar,
-    render_tab_alocacao,
-    render_tab_chat,
     render_tab_mensagem,
     render_tab_midia_performance,
-    render_tab_mobilizacao,
     render_tab_monitoramento,
     render_tab_prioridade_territorial,
-    render_tab_ranking,
-    render_tab_secoes,
     render_tab_simulacao,
 )
 
@@ -47,8 +42,7 @@ def run_app():
     db = carrega_db(paths, df_mun)
     repo = DuckDBAnalyticsRepository(db)
     report_store = ParquetReportStore(paths)
-    ai_service = ChromaGroqAIService(paths.chromadb_path, app_paths=paths)
-
+    ChromaGroqAIService(paths.chromadb_path, app_paths=paths)
     budget, cargo, n_mun, split_d, gerar = render_sidebar(bootstrap, paths.chromadb_path, repo)
     if gerar:
         try:

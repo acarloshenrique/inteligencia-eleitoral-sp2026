@@ -31,7 +31,7 @@ def test_settings_accepts_prod():
 def test_settings_rejects_invalid_env():
     try:
         Settings(APP_ENV="invalid")
-        assert False, "Expected ValidationError for invalid APP_ENV"
+        raise AssertionError("Expected ValidationError for invalid APP_ENV")
     except ValidationError:
         assert True
 

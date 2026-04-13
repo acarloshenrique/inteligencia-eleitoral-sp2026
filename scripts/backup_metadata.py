@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 import shutil
 
 from config.settings import get_settings

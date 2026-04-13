@@ -1,4 +1,3 @@
-from typing import Literal
 import unicodedata
 
 import pandas as pd

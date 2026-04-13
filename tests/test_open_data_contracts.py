@@ -43,6 +43,6 @@ def test_validate_municipio_enriched_rejects_invalid_status():
     )
     try:
         validate_municipio_enriched(df)
-        assert False, "Esperava OpenDataContractError"
+        raise AssertionError("Esperava OpenDataContractError")
     except OpenDataContractError:
         assert True

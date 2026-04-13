@@ -52,7 +52,7 @@ def test_e2e_bootstrap_error_stops_app(monkeypatch):
 
     try:
         app_main.run_app()
-        assert False, "Esperava interrupcao por st.stop"
+        raise AssertionError("Esperava interrupcao por st.stop")
     except RuntimeError:
         assert st.stopped is True
         assert any("Falha de bootstrap" in e for e in st.errors)

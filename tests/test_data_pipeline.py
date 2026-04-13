@@ -47,7 +47,7 @@ def test_simple_dag_detects_cycle():
     )
     try:
         dag.run({})
-        assert False, "Esperava PipelineError por ciclo"
+        raise AssertionError("Esperava PipelineError por ciclo")
     except PipelineError:
         assert True
 

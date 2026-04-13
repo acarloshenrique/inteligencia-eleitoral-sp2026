@@ -6,7 +6,7 @@ import pytest
 
 @pytest.mark.integration
 def test_api_enqueue_reindex_job(monkeypatch):
-    fastapi = pytest.importorskip("fastapi")
+    pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
     from api.main import app
@@ -68,7 +68,7 @@ def test_api_enqueue_reindex_job(monkeypatch):
 
 @pytest.mark.integration
 def test_api_enqueue_ingestion_job(monkeypatch):
-    fastapi = pytest.importorskip("fastapi")
+    pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
     from api.main import app
@@ -129,7 +129,7 @@ def test_api_enqueue_ingestion_job(monkeypatch):
 
 @pytest.mark.integration
 def test_api_ops_observability_and_schedule(monkeypatch):
-    fastapi = pytest.importorskip("fastapi")
+    pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
     from api.main import app

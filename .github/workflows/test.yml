@@ -24,10 +24,28 @@ jobs:
       - run: pip install -r requirements.txt ruff "mypy==1.11.2" bandit pip-audit
       - run: ruff check .
       - run: mypy --no-incremental application domain infrastructure presentation scripts
-      - run: bandit -q -r application domain infrastructure presentation scripts -x tests
-      - name: Dependency Audit (non-blocking)
+      - run: bandit -q -c pyproject.toml -r application domain infrastructure presentation scripts api workers --severity-level high --confidence-level medium
+      - name: Dependency Audit (block high/critical)
         run: |
-          pip-audit -r requirements.txt || true
+          set +e
+          pip-audit -r requirements.txt --format cyclonedx-json --output pip-audit.json
+          audit_status=$?
+          set -e
+          if [ ! -f pip-audit.json ]; then
+            echo "pip-audit failed before producing JSON"
+            exit "$audit_status"
+          fi
+          python scripts/enforce_pip_audit.py pip-audit.json --fail-on critical,high
+          if [ "$audit_status" -ne 0 ]; then
+            echo "pip-audit reported non-blocking vulnerabilities below high severity."
+          fi
+      - name: Upload pip-audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-json
+          path: pip-audit.json
+          if-no-files-found: ignore
 
   test:
     runs-on: ubuntu-latest

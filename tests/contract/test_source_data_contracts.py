@@ -34,6 +34,6 @@ def test_validate_input_contracts_rejects_invalid_mapping():
             seade_df=pd.DataFrame(),
             fiscal_df=pd.DataFrame(),
         )
-        assert False, "esperava SourceContractError"
+        raise AssertionError("esperava SourceContractError")
     except SourceContractError:
         assert True

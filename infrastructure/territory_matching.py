@@ -143,7 +143,7 @@ def layered_match_territory(
 
     if input_code_col and input_code_col in base.columns:
         base[input_code_col] = base[input_code_col].astype(str).str.strip()
-        for idx, row in base.loc[base["join_method"].isna()].iterrows():
+        for _, row in base.loc[base["join_method"].isna()].iterrows():
             code = str(row.get(input_code_col, "")).strip()
             if not code:
                 continue
@@ -166,7 +166,7 @@ def layered_match_territory(
         ("exact_name", dim_lookup, "municipio_norm_input", "municipio_norm", 1.0, "conflicting_exact_name"),
         ("historical_alias", alias_join, "municipio_norm_input", "alias_norm", 0.99, "conflicting_alias"),
     ]:
-        for idx, row in base.loc[base["join_method"].isna()].iterrows():
+        for _, row in base.loc[base["join_method"].isna()].iterrows():
             value = str(row.get(left_col, "")).strip()
             if not value:
                 continue
@@ -185,15 +185,15 @@ def layered_match_territory(
                     )
                 )
 
-    for idx, row in base.loc[base["join_method"].isna()].iterrows():
+    for _, row in base.loc[base["join_method"].isna()].iterrows():
         normalized = str(row["municipio_norm_input"]).strip()
-        candidates: list[dict[str, Any]] = []
+        fuzzy_candidates: list[dict[str, Any]] = []
         for _, candidate in alias_join.iterrows():
             alias_norm = str(candidate.get("alias_norm", "")).strip()
             if not alias_norm:
                 continue
             score = score_similarity(normalized, alias_norm)
-            candidates.append(
+            fuzzy_candidates.append(
                 {
                     "municipio_id_ibge7": candidate.get("municipio_id_ibge7"),
                     "codigo_tse": candidate.get("codigo_tse"),
@@ -203,10 +203,10 @@ def layered_match_territory(
                     "score": round(score, 6),
                 }
             )
-        candidates.sort(key=lambda item: item["score"], reverse=True)
+        fuzzy_candidates.sort(key=lambda item: item["score"], reverse=True)
         deduped: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
-        for candidate in candidates:
+        for candidate in fuzzy_candidates:
             municipio_id = str(candidate.get("municipio_id_ibge7", ""))
             if municipio_id in seen_ids:
                 continue
