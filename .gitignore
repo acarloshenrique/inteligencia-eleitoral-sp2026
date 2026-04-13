@@ -38,3 +38,16 @@ data/cache_tse/*.zip
 # OS
 .DS_Store
 Thumbs.db
+
+# Artefatos locais de execucao, deploy e diagnostico
+.hfspace-deploy/
+.mypy_cache/
+output/
+tmp/
+*.log
+mypy_out.txt
+ci_job_*.log
+contexto_candidato.txt
+contexto_vaga.txt
+interview_copilot_requirements.txt
+main.py
