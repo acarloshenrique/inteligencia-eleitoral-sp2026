@@ -22,8 +22,8 @@ services:
       - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
       - S3_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./data:/app/data:rw
@@ -48,8 +48,8 @@ services:
       - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
       - S3_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./data:/app/data:rw
@@ -71,8 +71,8 @@ services:
       - ARTIFACT_LOCAL_ROOT=${ARTIFACT_LOCAL_ROOT:-/app/data/artifacts}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - S3_BUCKET=${S3_BUCKET:-intel-eleitoral}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
       - S3_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./data:/app/data:rw
@@ -88,8 +88,8 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY:-minioadmin}
+      - MINIO_ROOT_USER=${S3_ACCESS_KEY:?Set S3_ACCESS_KEY; dev-only placeholder is documented in .env.example and blocked in prod}
+      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY:?Set S3_SECRET_KEY; dev-only placeholder is documented in .env.example and blocked in prod}
     ports:
       - "9000:9000"
       - "9001:9001"

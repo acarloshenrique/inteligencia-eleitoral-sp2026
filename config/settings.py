@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     require_redis_auth_in_prod: bool = Field(default=True, alias="REQUIRE_REDIS_AUTH_IN_PROD")
     chroma_vector_backend: str = Field(default="local", alias="CHROMA_VECTOR_BACKEND")
     chroma_allow_shared_volume: bool = Field(default=False, alias="CHROMA_ALLOW_SHARED_VOLUME")
-    lgpd_anonymization_salt: str = Field(default="change-me", alias="LGPD_ANONYMIZATION_SALT")
+    lgpd_anonymization_salt: str = Field(default="", alias="LGPD_ANONYMIZATION_SALT")
 
     @field_validator("app_env", mode="before")
     @classmethod

@@ -4,6 +4,31 @@ import pandas as pd
 
 from config.settings import AppPaths, get_settings
 
+WEAK_SECRET_PLACEHOLDERS = {
+    "",
+    "admin",
+    "adminadmin",
+    "change-me",
+    "changeme",
+    "default",
+    "dev-admin-token",
+    "minioadmin",
+    "password",
+    "secret",
+    "test",
+    "token",
+}
+
+
+def _is_weak_secret(value) -> bool:
+    normalized = str(value or "").strip().lower()
+    return normalized in WEAK_SECRET_PLACEHOLDERS
+
+
+def _require_strong_secret(errors: list[str], *, name: str, value, reason: str) -> None:
+    if _is_weak_secret(value):
+        errors.append(f"APP_ENV=prod exige {name} forte: {reason}.")
+
 
 def build_paths():
     return get_settings().build_paths()
@@ -81,6 +106,43 @@ def validate_prod_runtime_hardening(settings, paths: AppPaths) -> list[str]:
         chroma_path = paths.chromadb_path.resolve()
         if tenant_root is None or not (chroma_path == tenant_root or tenant_root in chroma_path.parents):
             erros.append("APP_ENV=prod exige volume ChromaDB isolado dentro do tenant.")
+
+    _require_strong_secret(
+        erros,
+        name="LGPD_ANONYMIZATION_SALT",
+        value=settings.lgpd_anonymization_salt,
+        reason="nao use vazio, change-me ou outro placeholder para anonimizar dados",
+    )
+
+    if str(settings.artifact_backend).lower() == "s3":
+        _require_strong_secret(
+            erros,
+            name="S3_ACCESS_KEY",
+            value=settings.s3_access_key,
+            reason="configure credencial real do storage de artefatos",
+        )
+        _require_strong_secret(
+            erros,
+            name="S3_SECRET_KEY",
+            value=settings.s3_secret_key,
+            reason="minioadmin e placeholders sao bloqueados",
+        )
+
+    if str(settings.secret_backend).lower() == "vault":
+        _require_strong_secret(
+            erros,
+            name="VAULT_TOKEN",
+            value=settings.vault_token,
+            reason="configure token real via secret manager ou env seguro",
+        )
+
+    if bool(settings.ops_alert_email_enabled):
+        _require_strong_secret(
+            erros,
+            name="OPS_ALERT_SMTP_PASSWORD",
+            value=settings.ops_alert_smtp_password,
+            reason="alertas por email em producao exigem senha real",
+        )
     return erros
 
 

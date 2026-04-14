@@ -84,3 +84,24 @@ def test_invalid_role_fails_configuration(monkeypatch):
     _patch_auth(monkeypatch, app_env="prod", mapping={"token": {"actor": "ops", "role": "root", "expires_at": expires}})
     with pytest.raises(security.AuthConfigurationError):
         security.validate_auth_configuration()
+
+
+def test_api_lifespan_fails_fast_on_prod_hardening_errors(monkeypatch):
+    import asyncio
+
+    from api import main
+
+    class _Settings:
+        def build_paths(self):
+            return object()
+
+    monkeypatch.setattr(main, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(main, "validate_prod_runtime_hardening", lambda settings, paths: ["weak secret"])
+    monkeypatch.setattr(main, "validate_auth_configuration", lambda: None)
+
+    async def _run_lifespan():
+        async with main.lifespan(main.app):
+            pass
+
+    with pytest.raises(RuntimeError, match="weak secret"):
+        asyncio.run(_run_lifespan())

@@ -25,7 +25,7 @@ from api.contracts import (
 )
 from api.security import AuthContext, audit_metadata_from_request, require_roles, validate_auth_configuration
 from config.settings import get_settings
-from infrastructure.env import is_within_gold_layer
+from infrastructure.env import is_within_gold_layer, validate_prod_runtime_hardening
 from infrastructure.metadata_db import MetadataDb
 from infrastructure.observability import AlertThresholds, build_observability_snapshot, evaluate_and_dispatch_alerts
 from infrastructure.operation_scheduler import build_default_schedule, write_schedule_manifest
@@ -54,6 +54,11 @@ def _validate_gold_input_path(input_path: str) -> None:
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
+    settings = get_settings()
+    paths = settings.build_paths()
+    hardening_errors = validate_prod_runtime_hardening(settings, paths)
+    if hardening_errors:
+        raise RuntimeError("; ".join(hardening_errors))
     validate_auth_configuration()
     yield
 
