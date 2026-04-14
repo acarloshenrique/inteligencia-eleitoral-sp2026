@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 import uuid
@@ -7,7 +8,7 @@ import uuid
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from api.security import AuthContext, audit_metadata_from_request, require_roles
+from api.security import AuthContext, audit_metadata_from_request, require_roles, validate_auth_configuration
 from config.settings import get_settings
 from infrastructure.env import is_within_gold_layer
 from infrastructure.metadata_db import MetadataDb
@@ -60,7 +61,13 @@ def _validate_gold_input_path(input_path: str) -> None:
         raise HTTPException(status_code=400, detail="input_path precisa estar na camada gold")
 
 
-app = FastAPI(title="Inteligencia Eleitoral API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    validate_auth_configuration()
+    yield
+
+
+app = FastAPI(title="Inteligencia Eleitoral API", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/health")
