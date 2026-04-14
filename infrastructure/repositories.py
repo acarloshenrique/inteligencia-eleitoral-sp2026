@@ -4,6 +4,7 @@ from typing import Any, Sequence
 
 import pandas as pd
 
+from application.interfaces import DataStore, LLMClient, ReportStore, VectorStore
 from config.settings import AppPaths, get_settings
 from infrastructure.ai import carrega_stack_ia
 from infrastructure.env import persistir_relatorio, resolve_relatorio_path
@@ -12,7 +13,7 @@ from infrastructure.rag_metrics import RagMetricsTracker
 from infrastructure.sql_safety import is_allowed_table_name
 
 
-class DuckDBAnalyticsRepository:
+class DuckDBAnalyticsRepository(DataStore):
     def __init__(self, db):
         self._db = db
 
@@ -44,7 +45,7 @@ class DuckDBAnalyticsRepository:
         return int(df.iloc[0]["n"])
 
 
-class ParquetReportStore:
+class ParquetReportStore(ReportStore):
     def __init__(self, paths: AppPaths):
         self._paths = paths
 
@@ -58,7 +59,7 @@ class ParquetReportStore:
         return pd.read_parquet(str(caminho))
 
 
-class ChromaGroqAIService:
+class ChromaGroqAIService(VectorStore, LLMClient):
     def __init__(self, chromadb_path: Path, *, app_paths: AppPaths | None = None):
         self._chromadb_path = chromadb_path
         settings = get_settings()
