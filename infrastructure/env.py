@@ -90,7 +90,9 @@ def persistir_relatorio(paths: AppPaths, df, nome_arquivo):
             return destino
         except Exception as e:
             ultimo_erro = e
-    raise ultimo_erro
+    if ultimo_erro is not None:
+        raise ultimo_erro
+    raise RuntimeError("Nao foi possivel persistir relatorio: nenhum destino configurado.")
 
 
 def bootstrap_ambiente(paths: AppPaths):
