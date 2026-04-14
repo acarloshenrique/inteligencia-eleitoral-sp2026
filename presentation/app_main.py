@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 from pydantic import ValidationError
 
 from application.use_cases_layered import executar_alocacao

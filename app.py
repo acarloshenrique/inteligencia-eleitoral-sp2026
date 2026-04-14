@@ -1,6 +1,7 @@
-import streamlit as st
+"""Deprecated Streamlit entrypoint.
 
-from presentation.app_main import run_app
+Canonical UI entrypoint: web_ui/streamlit_app.py
+Composition layer: presentation.app_main.run_app
+"""
 
-run_app()
-st.stop()
+raise SystemExit("app.py is deprecated. Run: streamlit run web_ui/streamlit_app.py")

@@ -32,6 +32,17 @@ Sistema de alocação inteligente de recursos de campanha para os 644 município
 | Banco de dados | DuckDB |
 | Deploy | Docker + HF Spaces |
 
+
+## Entrypoint canonico da UI
+
+O caminho oficial da interface Streamlit e:
+
+```bash
+streamlit run web_ui/streamlit_app.py
+```
+
+`web_ui/streamlit_app.py` chama `presentation.app_main.run_app()`. A camada `presentation/` contem a composicao e os componentes da UI. O arquivo `app.py` esta descontinuado e existe apenas para falhar com uma mensagem explicita caso alguem tente usar o entrypoint legado. Docker, HF Spaces, CI e healthcheck devem apontar para `web_ui/streamlit_app.py`.
+
 ## Rodando localmente
 
 ```bash
@@ -42,7 +53,10 @@ cd inteligencia-eleitoral-sp2026
 # Configure a chave Groq
 export GROQ_API_KEY=gsk_...
 
-# Suba com Docker Compose
+# Rode a UI canonica diretamente
+streamlit run web_ui/streamlit_app.py
+
+# Ou suba com Docker Compose
 docker compose up --build
 
 # Acesse em http://localhost:8501
@@ -161,18 +175,18 @@ Fluxo operacional:
 
 ```
 .
-├── app.py                  # Interface Streamlit (5 tabs)
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── ingestion/              # downloads, validação e runs de ingestão
-├── lake/
-│   ├── bronze/             # dado cru vindo das fontes
-│   ├── silver/             # schema padronizado e chaves canônicas
-│   └── gold/               # marts, serving, reports e catálogo
-├── chromadb/               # índice vetorial 644 municípios
-├── scripts/
-│   └── run_automated_ingestion.py
-└── tests/
-    └── test_modelo.py      # Testes dos componentes do score
+|-- web_ui/streamlit_app.py # Entrypoint canonico Streamlit
+|-- presentation/           # Composicao e componentes da UI
+|-- Dockerfile
+|-- docker-compose.yml
+|-- requirements.txt
+|-- ingestion/              # downloads, validacao e runs de ingestao
+|-- lake/
+|   |-- bronze/             # dado cru vindo das fontes
+|   |-- silver/             # schema padronizado e chaves canonicas
+|   `-- gold/               # marts, serving, reports e catalogo
+|-- chromadb/               # indice vetorial
+|-- scripts/
+|   `-- run_automated_ingestion.py
+`-- tests/
 ```

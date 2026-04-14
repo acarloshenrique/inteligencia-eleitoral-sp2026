@@ -36,15 +36,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && useradd --system --create-home --gid app --home-dir /home/app app
 
 COPY --from=builder /opt/venv /opt/venv
-COPY app.py healthcheck.py ./
+COPY . .
 
 RUN mkdir -p /app/data/outputs/estado_sessao \
     /app/data/outputs/relatorios \
-    /app/data/chromadb \\
-    /app/data/data_lake/bronze \\
-    /app/data/data_lake/silver \\
-    /app/data/data_lake/gold \\
-    /app/data/data_lake/catalog \\
+    /app/data/chromadb \
+    /app/data/data_lake/bronze \
+    /app/data/data_lake/silver \
+    /app/data/data_lake/gold \
+    /app/data/data_lake/catalog \
     /tmp/inteligencia_eleitoral/relatorios \
     && chown -R app:app /app /tmp/inteligencia_eleitoral /home/app
 
@@ -57,7 +57,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-CMD ["streamlit", "run", "app.py", \
+CMD ["streamlit", "run", "web_ui/streamlit_app.py", \
      "--server.port=7860", \
      "--server.address=0.0.0.0", \
      "--server.headless=true", \

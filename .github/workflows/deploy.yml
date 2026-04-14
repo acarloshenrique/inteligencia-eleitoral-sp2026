@@ -4,7 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "app.py"
+      - "web_ui/**"
+      - "presentation/**"
+      - "application/**"
+      - "domain/**"
+      - "infrastructure/**"
+      - "config/**"
+      - "healthcheck.py"
+      - "requirements.in"
       - "requirements.txt"
       - "Dockerfile"
       - "README.md"
@@ -24,7 +31,11 @@ jobs:
           git config --global user.name "GitHub Actions"
           git clone https://user:$HF_TOKEN@huggingface.co/spaces/acarloshenrique/alocador-eleitoral-sp2026 hf_space
           cd hf_space
-          cp ../app.py .
+          rm -f app.py
+          rm -rf application config domain infrastructure presentation web_ui
+          cp -R ../application ../config ../domain ../infrastructure ../presentation ../web_ui .
+          cp ../healthcheck.py .
+          cp ../requirements.in .
           cp ../requirements.txt .
           cp ../Dockerfile .
           cp ../README.md .
