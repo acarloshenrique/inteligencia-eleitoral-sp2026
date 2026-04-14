@@ -7,11 +7,19 @@ def test_streamlit_entrypoint_is_canonical():
     assert "run_app()" in entrypoint
 
 
-def test_legacy_app_py_is_deprecated_stub():
+def test_app_py_is_thin_compatibility_entrypoint():
     legacy = Path("app.py").read_text(encoding="utf-8")
-    assert "Deprecated Streamlit entrypoint" in legacy
-    assert "presentation.app_main import run_app" not in legacy
-    assert "web_ui/streamlit_app.py" in legacy
+    assert "from presentation.app_main import run_app" in legacy
+    assert "run_app()" in legacy
+    assert len(legacy.splitlines()) < 50
+    assert "import streamlit" not in legacy.lower()
+
+
+def test_presentation_uses_infrastructure_runtime_composition():
+    app_main = Path("presentation/app_main.py").read_text(encoding="utf-8")
+    assert "from infrastructure.app_runtime import build_app_runtime, initialize_app_environment" in app_main
+    assert "carrega_dados" not in app_main
+    assert "carrega_db" not in app_main
 
 
 def test_runtime_configs_use_canonical_streamlit_entrypoint():

@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -46,9 +47,11 @@ class _FakeStreamlit:
 def test_e2e_bootstrap_error_stops_app(monkeypatch):
     st = _FakeStreamlit()
     monkeypatch.setattr(app_main, "st", st)
-    monkeypatch.setattr(app_main, "get_settings", lambda: object())
-    monkeypatch.setattr(app_main, "build_paths", lambda: object())
-    monkeypatch.setattr(app_main, "bootstrap_ambiente", lambda _p: {"erros": ["x"], "avisos": [], "app_env": "dev"})
+    monkeypatch.setattr(
+        app_main,
+        "initialize_app_environment",
+        lambda: SimpleNamespace(bootstrap={"erros": ["x"], "avisos": [], "app_env": "dev"}),
+    )
 
     try:
         app_main.run_app()
@@ -62,22 +65,17 @@ def test_e2e_bootstrap_error_stops_app(monkeypatch):
 def test_e2e_generate_allocation_happy_path(monkeypatch):
     st = _FakeStreamlit()
     monkeypatch.setattr(app_main, "st", st)
-    monkeypatch.setattr(app_main, "get_settings", lambda: object())
 
-    class _Paths:
-        chromadb_path = object()
-
-    monkeypatch.setattr(app_main, "build_paths", lambda: _Paths())
-    monkeypatch.setattr(
-        app_main,
-        "bootstrap_ambiente",
-        lambda _p: {"erros": [], "avisos": [], "app_env": "dev"},
+    paths = SimpleNamespace(chromadb_path=object())
+    runtime = SimpleNamespace(
+        bootstrap={"erros": [], "avisos": [], "app_env": "dev"},
+        paths=paths,
+        df_mun=pd.DataFrame([{"municipio": "Cidade A"}]),
+        repository=object(),
+        report_store=object(),
     )
-    monkeypatch.setattr(app_main, "carrega_dados", lambda _p: pd.DataFrame([{"municipio": "Cidade A"}]))
-    monkeypatch.setattr(app_main, "carrega_db", lambda _p, _df: object())
-    monkeypatch.setattr(app_main, "DuckDBAnalyticsRepository", lambda _db: object())
-    monkeypatch.setattr(app_main, "ParquetReportStore", lambda _p: object())
-    monkeypatch.setattr(app_main, "ChromaGroqAIService", lambda _c, app_paths=None: object())
+    monkeypatch.setattr(app_main, "initialize_app_environment", lambda: SimpleNamespace(bootstrap=runtime.bootstrap))
+    monkeypatch.setattr(app_main, "build_app_runtime", lambda _env: runtime)
     monkeypatch.setattr(app_main, "render_sidebar", lambda *_: (100000, "deputado_federal", 20, 0.5, True))
     monkeypatch.setattr(
         app_main,
