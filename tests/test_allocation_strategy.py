@@ -125,7 +125,13 @@ def test_modular_score_uses_external_score_weights():
         mart_custo=empty,
         mart_sensibilidade=empty,
         mart_midia=empty,
-        score_weights={"potencial_eleitoral": 1.0, "oportunidade": 0.0, "eficiencia_midia": 0.0, "custo": 0.0, "risco_invertido": 0.0},
+        score_weights={
+            "potencial_eleitoral": 1.0,
+            "oportunidade": 0.0,
+            "eficiencia_midia": 0.0,
+            "custo": 0.0,
+            "risco_invertido": 0.0,
+        },
     )
     opportunity_first = build_modular_allocation_scores(
         mart_municipio=mart_municipio,
@@ -134,7 +140,13 @@ def test_modular_score_uses_external_score_weights():
         mart_custo=empty,
         mart_sensibilidade=empty,
         mart_midia=empty,
-        score_weights={"potencial_eleitoral": 0.0, "oportunidade": 1.0, "eficiencia_midia": 0.0, "custo": 0.0, "risco_invertido": 0.0},
+        score_weights={
+            "potencial_eleitoral": 0.0,
+            "oportunidade": 1.0,
+            "eficiencia_midia": 0.0,
+            "custo": 0.0,
+            "risco_invertido": 0.0,
+        },
     )
 
     assert potential_first.iloc[0]["municipio_id_ibge7"] == "1"

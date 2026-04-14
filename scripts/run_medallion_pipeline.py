@@ -37,15 +37,37 @@ def _resolve_latest_asset(paths, name: str, *, required: bool) -> Path | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Executa pipeline Bronze/Silver/Gold para dados eleitorais e contexto.")
+    parser = argparse.ArgumentParser(
+        description="Executa pipeline Bronze/Silver/Gold para dados eleitorais e contexto."
+    )
     parser.add_argument("--base-parquet", default="", help="Parquet base eleitoral.")
-    parser.add_argument("--source-catalog", default="", help="Catalogo JSON opcional para ingestao automatizada completa.")
-    parser.add_argument("--mapping-csv", default="", help="CSV de correspondencia TSE/IBGE. Quando omitido, resolve do bronze/downloads.")
-    parser.add_argument("--socio-csv", default="", help="CSV socioeconomico opcional. Quando omitido, resolve do bronze/downloads.")
-    parser.add_argument("--secao-csv", default="", help="CSV de resultados por secao opcional. Quando omitido, resolve do bronze/downloads.")
-    parser.add_argument("--ibge-csv", default="", help="CSV de indicadores IBGE. Quando omitido, resolve do bronze/downloads.")
-    parser.add_argument("--seade-csv", default="", help="CSV de indicadores SEADE. Quando omitido, resolve do bronze/downloads.")
-    parser.add_argument("--fiscal-csv", default="", help="CSV de transferencias/emendas por municipio. Quando omitido, resolve do bronze/downloads.")
+    parser.add_argument(
+        "--source-catalog", default="", help="Catalogo JSON opcional para ingestao automatizada completa."
+    )
+    parser.add_argument(
+        "--mapping-csv",
+        default="",
+        help="CSV de correspondencia TSE/IBGE. Quando omitido, resolve do bronze/downloads.",
+    )
+    parser.add_argument(
+        "--socio-csv", default="", help="CSV socioeconomico opcional. Quando omitido, resolve do bronze/downloads."
+    )
+    parser.add_argument(
+        "--secao-csv",
+        default="",
+        help="CSV de resultados por secao opcional. Quando omitido, resolve do bronze/downloads.",
+    )
+    parser.add_argument(
+        "--ibge-csv", default="", help="CSV de indicadores IBGE. Quando omitido, resolve do bronze/downloads."
+    )
+    parser.add_argument(
+        "--seade-csv", default="", help="CSV de indicadores SEADE. Quando omitido, resolve do bronze/downloads."
+    )
+    parser.add_argument(
+        "--fiscal-csv",
+        default="",
+        help="CSV de transferencias/emendas por municipio. Quando omitido, resolve do bronze/downloads.",
+    )
     parser.add_argument("--ano", type=int, default=None, help="Ano de referencia.")
     parser.add_argument("--mes", type=int, default=None, help="Mes de referencia.")
     parser.add_argument("--turno", type=int, default=None, help="Turno eleitoral.")
@@ -76,11 +98,31 @@ def main() -> int:
         if args.mapping_csv
         else _resolve_latest_asset(paths, "municipios_tse_ibge", required=True)
     )
-    socio_path = Path(args.socio_csv).resolve() if args.socio_csv else _resolve_latest_asset(paths, "indicadores_municipais", required=False)
-    secao_path = Path(args.secao_csv).resolve() if args.secao_csv else _resolve_latest_asset(paths, "resultados_secao", required=False)
-    ibge_path = Path(args.ibge_csv).resolve() if args.ibge_csv else _resolve_latest_asset(paths, "ibge_pop_renda_educacao", required=False)
-    seade_path = Path(args.seade_csv).resolve() if args.seade_csv else _resolve_latest_asset(paths, "seade_ipvs_emprego_saude", required=False)
-    fiscal_path = Path(args.fiscal_csv).resolve() if args.fiscal_csv else _resolve_latest_asset(paths, "transparencia_transferencias_emendas", required=False)
+    socio_path = (
+        Path(args.socio_csv).resolve()
+        if args.socio_csv
+        else _resolve_latest_asset(paths, "indicadores_municipais", required=False)
+    )
+    secao_path = (
+        Path(args.secao_csv).resolve()
+        if args.secao_csv
+        else _resolve_latest_asset(paths, "resultados_secao", required=False)
+    )
+    ibge_path = (
+        Path(args.ibge_csv).resolve()
+        if args.ibge_csv
+        else _resolve_latest_asset(paths, "ibge_pop_renda_educacao", required=False)
+    )
+    seade_path = (
+        Path(args.seade_csv).resolve()
+        if args.seade_csv
+        else _resolve_latest_asset(paths, "seade_ipvs_emprego_saude", required=False)
+    )
+    fiscal_path = (
+        Path(args.fiscal_csv).resolve()
+        if args.fiscal_csv
+        else _resolve_latest_asset(paths, "transparencia_transferencias_emendas", required=False)
+    )
 
     if socio_path is not None and not socio_path.exists():
         socio_path = None

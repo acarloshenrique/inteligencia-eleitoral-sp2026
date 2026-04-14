@@ -42,8 +42,6 @@ def compute_update_delay_days(bronze_assets: list[dict[str, Any]]) -> dict[str, 
     return delays
 
 
-
-
 def apply_row_quality_scores(
     df: pd.DataFrame,
     *,
@@ -62,7 +60,9 @@ def apply_row_quality_scores(
     coverage_columns = source_existing or critical_existing or list(out.columns)
 
     if coverage_columns:
-        non_null = out[coverage_columns].notna() & (out[coverage_columns].astype(str).apply(lambda col: col.str.strip()) != "")
+        non_null = out[coverage_columns].notna() & (
+            out[coverage_columns].astype(str).apply(lambda col: col.str.strip()) != ""
+        )
         out["coverage"] = non_null.sum(axis=1).astype(float) / max(1, len(coverage_columns))
     else:
         out["coverage"] = 1.0
@@ -86,10 +86,13 @@ def apply_row_quality_scores(
         else pd.Series([False] * len(out), index=out.index)
     )
     review_penalty = needs_review.map({True: 0.75, False: 1.0}).astype(float)
-    out["data_quality_score"] = ((0.45 * join_confidence) + (0.35 * critical_completeness) + (0.20 * out["coverage"])) * review_penalty
+    out["data_quality_score"] = (
+        (0.45 * join_confidence) + (0.35 * critical_completeness) + (0.20 * out["coverage"])
+    ) * review_penalty
     out["data_quality_score"] = out["data_quality_score"].clip(0.0, 1.0).round(6)
     out["coverage"] = out["coverage"].clip(0.0, 1.0).round(6)
     return out
+
 
 def compute_drift_score(
     *,

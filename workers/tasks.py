@@ -97,7 +97,10 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 if bool(payload.get("minimize", True)):
                     df = minimize_dataframe(df)
                 if bool(payload.get("anonymize", False)):
-                    salt = build_secret_provider(settings).get_secret("LGPD_ANONYMIZATION_SALT") or settings.lgpd_anonymization_salt
+                    salt = (
+                        build_secret_provider(settings).get_secret("LGPD_ANONYMIZATION_SALT")
+                        or settings.lgpd_anonymization_salt
+                    )
                     df = anonymize_columns(df, ["municipio"], salt=salt)
                 tmp_path = paths.runtime_reports_root / f"export_input_{job_id}.parquet"
                 tmp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,6 +131,7 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         _evaluate_job_alerts(db, settings, tenant_id)
         raise
 
+
 def run_ingestion_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db = _metadata_db()
     settings = get_settings()
@@ -137,7 +141,9 @@ def run_ingestion_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db.set_status(job_id, "running")
     try:
         with observer.track(event_type="job.ingest", resource=job_id, metadata={"payload": payload}) as span:
-            catalog_raw = str(payload.get("source_catalog_path") or settings.ingestion_source_catalog_path or "").strip()
+            catalog_raw = str(
+                payload.get("source_catalog_path") or settings.ingestion_source_catalog_path or ""
+            ).strip()
             if not catalog_raw:
                 raise ValueError("source_catalog_path nao informado")
             result = run_automated_ingestion(

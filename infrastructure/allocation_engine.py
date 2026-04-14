@@ -61,7 +61,9 @@ def build_modular_allocation_scores(
         "risco_invertido": 0.10,
     }
     risk_weights = risk_weights or {"volatilidade_historica": 0.70, "qualidade_dados": 0.30}
-    base = _base_municipios(mart_municipio, mart_potencial, mart_territorial, mart_custo, mart_sensibilidade, mart_midia, features)
+    base = _base_municipios(
+        mart_municipio, mart_potencial, mart_territorial, mart_custo, mart_sensibilidade, mart_midia, features
+    )
     if base.empty:
         return pd.DataFrame(columns=["municipio_id_ibge7", *SCORE_COLUMNS, "score_alocacao", "roi_politico_estimado"])
 
@@ -69,7 +71,10 @@ def build_modular_allocation_scores(
     merge_specs = [
         (mart_municipio, ["municipio_id_ibge7", "ranking_medio_3ciclos", "indice_medio_3ciclos", "data_quality_score"]),
         (mart_potencial, ["municipio_id_ibge7", "potencial_eleitoral_ajustado_social", "pop_total"]),
-        (mart_territorial, ["municipio_id_ibge7", "score_priorizacao_territorial_sp", "ipvs", "emprego_norm", "saude_norm"]),
+        (
+            mart_territorial,
+            ["municipio_id_ibge7", "score_priorizacao_territorial_sp", "ipvs", "emprego_norm", "saude_norm"],
+        ),
         (mart_custo, ["municipio_id_ibge7", "custo_mobilizacao_relativo"]),
         (mart_sensibilidade, ["municipio_id_ibge7", "sensibilidade_investimento_publico"]),
         (features, ["municipio_id_ibge7", "volatilidade_historica", "competitividade", "crescimento_eleitoral"]),
@@ -78,7 +83,9 @@ def build_modular_allocation_scores(
         if frame is not None and not frame.empty:
             existing = [c for c in columns if c in frame.columns]
             if "municipio_id_ibge7" in existing:
-                score = score.merge(frame[existing].drop_duplicates("municipio_id_ibge7"), on="municipio_id_ibge7", how="left")
+                score = score.merge(
+                    frame[existing].drop_duplicates("municipio_id_ibge7"), on="municipio_id_ibge7", how="left"
+                )
 
     if not mart_midia.empty:
         media = mart_midia.copy()
@@ -106,7 +113,9 @@ def build_modular_allocation_scores(
         + _ensure_metric(score, "crescimento_eleitoral")
     )
     score["score_eficiencia_midia"] = _normalize(
-        _ensure_metric(score, "performance_midia") + _ensure_metric(score, "ctr_medio") + _ensure_metric(score, "conversao_total"),
+        _ensure_metric(score, "performance_midia")
+        + _ensure_metric(score, "ctr_medio")
+        + _ensure_metric(score, "conversao_total"),
         neutral=0.5,
     )
     score["score_custo"] = _normalize(
@@ -117,8 +126,10 @@ def build_modular_allocation_scores(
     risk_base = _normalize(_ensure_metric(score, "volatilidade_historica"), neutral=0.25)
     quality_risk = 1.0 - _ensure_metric(score, "data_quality_score", 1.0).clip(0.0, 1.0)
     score["score_risco"] = (
-        risk_weights["volatilidade_historica"] * risk_base + risk_weights["qualidade_dados"] * quality_risk
-    ).clip(0.0, 1.0).round(6)
+        (risk_weights["volatilidade_historica"] * risk_base + risk_weights["qualidade_dados"] * quality_risk)
+        .clip(0.0, 1.0)
+        .round(6)
+    )
     score["score_alocacao"] = (
         100.0
         * (
@@ -130,7 +141,8 @@ def build_modular_allocation_scores(
         )
     ).round(6)
     score["roi_politico_estimado"] = (
-        score["score_alocacao"] / (1.0 + _ensure_metric(score, "cpc_medio") + _ensure_metric(score, "custo_mobilizacao_relativo"))
+        score["score_alocacao"]
+        / (1.0 + _ensure_metric(score, "cpc_medio") + _ensure_metric(score, "custo_mobilizacao_relativo"))
     ).round(6)
     media_spend = _ensure_metric(score, "gasto_midia")
     media_perf = _ensure_metric(score, "performance_midia")
@@ -138,7 +150,9 @@ def build_modular_allocation_scores(
     score["motivo_desperdicio"] = score["desperdicio_midia"].map(
         {True: "gasto acima da mediana com performance abaixo da mediana", False: "sem desperdicio relevante detectado"}
     )
-    score = score.sort_values(["score_alocacao", "roi_politico_estimado"], ascending=[False, False]).reset_index(drop=True)
+    score = score.sort_values(["score_alocacao", "roi_politico_estimado"], ascending=[False, False]).reset_index(
+        drop=True
+    )
     score["ranking"] = score.index + 1
     for col in SCORE_COLUMNS + ["score_alocacao", "roi_politico_estimado"]:
         score[col] = pd.to_numeric(score[col], errors="coerce").fillna(0.0).round(6)
@@ -151,18 +165,33 @@ def build_modular_allocation_scores(
 
 def simulate_budget(scores: pd.DataFrame, *, total_budget: float) -> pd.DataFrame:
     if scores.empty:
-        return pd.DataFrame(columns=["municipio_id_ibge7", "verba_simulada", "impacto_incremental_estimado", "roi_politico_estimado", "desperdicio_midia"])
+        return pd.DataFrame(
+            columns=[
+                "municipio_id_ibge7",
+                "verba_simulada",
+                "impacto_incremental_estimado",
+                "roi_politico_estimado",
+                "desperdicio_midia",
+            ]
+        )
     out = scores.copy()
     budget = max(0.0, float(total_budget))
-    weights = (pd.to_numeric(out["score_alocacao"], errors="coerce").fillna(0.0) * (1.0 - pd.to_numeric(out["score_risco"], errors="coerce").fillna(0.0))).clip(lower=0.0)
+    weights = (
+        pd.to_numeric(out["score_alocacao"], errors="coerce").fillna(0.0)
+        * (1.0 - pd.to_numeric(out["score_risco"], errors="coerce").fillna(0.0))
+    ).clip(lower=0.0)
     if float(weights.sum()) <= 0.0:
         weights = pd.Series([1.0] * len(out), index=out.index, dtype=float)
     out["verba_simulada"] = (weights / weights.sum() * budget).round(2)
     out["impacto_incremental_estimado"] = (
         (out["verba_simulada"] / 1000.0) * pd.to_numeric(out["roi_politico_estimado"], errors="coerce").fillna(0.0)
     ).round(6)
-    out["pergunta_respondida"] = out["verba_simulada"].map(lambda v: f"Se investir R$ {v:,.2f}, priorizar execucao com ROI politico estimado")
-    return out.sort_values(["impacto_incremental_estimado", "score_alocacao"], ascending=[False, False]).reset_index(drop=True)
+    out["pergunta_respondida"] = out["verba_simulada"].map(
+        lambda v: f"Se investir R$ {v:,.2f}, priorizar execucao com ROI politico estimado"
+    )
+    return out.sort_values(["impacto_incremental_estimado", "score_alocacao"], ascending=[False, False]).reset_index(
+        drop=True
+    )
 
 
 def recommend_allocation(
@@ -173,18 +202,51 @@ def recommend_allocation(
     total_budget: float,
 ) -> pd.DataFrame:
     if scores.empty:
-        return pd.DataFrame(columns=["ranking", "municipio_id_ibge7", "verba_sugerida", "canal_ideal", "mensagem_ideal", "justificativa"])
-    rec = scores[["municipio_id_ibge7", "ranking", *SCORE_COLUMNS, "score_alocacao", "roi_politico_estimado", "desperdicio_midia", "motivo_desperdicio"]].copy()
+        return pd.DataFrame(
+            columns=[
+                "ranking",
+                "municipio_id_ibge7",
+                "verba_sugerida",
+                "canal_ideal",
+                "mensagem_ideal",
+                "justificativa",
+            ]
+        )
+    rec = scores[
+        [
+            "municipio_id_ibge7",
+            "ranking",
+            *SCORE_COLUMNS,
+            "score_alocacao",
+            "roi_politico_estimado",
+            "desperdicio_midia",
+            "motivo_desperdicio",
+        ]
+    ].copy()
     rec = rec.merge(
         budget_simulation[["municipio_id_ibge7", "verba_simulada", "impacto_incremental_estimado"]],
         on="municipio_id_ibge7",
         how="left",
     )
     if not mart_message.empty:
-        renamed = mart_message.sort_values(["municipio_id_ibge7", "ranking_mensagem_cidade"]).drop_duplicates("municipio_id_ibge7").rename(
-            columns={"mensagem": "mensagem_ideal", "plataforma": "canal_ideal"}
+        renamed = (
+            mart_message.sort_values(["municipio_id_ibge7", "ranking_mensagem_cidade"])
+            .drop_duplicates("municipio_id_ibge7")
+            .rename(columns={"mensagem": "mensagem_ideal", "plataforma": "canal_ideal"})
         )
-        keep = [c for c in ["municipio_id_ibge7", "municipio", "mensagem_ideal", "tema", "narrativa", "publico_alvo", "canal_ideal"] if c in renamed.columns]
+        keep = [
+            c
+            for c in [
+                "municipio_id_ibge7",
+                "municipio",
+                "mensagem_ideal",
+                "tema",
+                "narrativa",
+                "publico_alvo",
+                "canal_ideal",
+            ]
+            if c in renamed.columns
+        ]
         rec = rec.merge(renamed[keep], on="municipio_id_ibge7", how="left")
     if "canal_ideal" not in rec.columns:
         rec["canal_ideal"] = "midia_paga"

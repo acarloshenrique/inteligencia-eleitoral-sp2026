@@ -2,6 +2,11 @@
 line-length = 120
 target-version = "py311"
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
 [tool.ruff.lint]
 # Fase 1: bloqueia erros de sintaxe/importacao e bugbear de baixo ruido.
 # E501/E402 ficam fora ate a fase de formatacao/import hygiene do legado.
@@ -9,6 +14,7 @@ select = ["E", "F", "W", "B"]
 ignore = ["E501", "E402"]
 
 [tool.ruff.lint.per-file-ignores]
+"api/main.py" = ["B008"]  # FastAPI Depends em endpoints declarativos.
 "api/security.py" = ["B008"]  # FastAPI Depends e um default declarativo esperado.
 "tests/**/*.py" = ["F401", "F841"]
 

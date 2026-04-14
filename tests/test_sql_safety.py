@@ -37,7 +37,6 @@ def test_is_allowed_table_name_accepts_only_known_tables():
     assert not is_allowed_table_name("usuarios")
 
 
-
 def test_chat_query_templates_are_explicitly_whitelisted():
     expected = {
         "chat.product_recommendation",

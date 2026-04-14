@@ -8,7 +8,6 @@ import sqlite3
 from typing import Any
 
 
-
 class MetadataDb:
     def __init__(self, db_path: Path):
         self._db_path = db_path
@@ -120,7 +119,9 @@ class MetadataDb:
         with self._conn() as conn:
             conn.execute("UPDATE jobs SET status = ?, updated_at_utc = ? WHERE id = ?", (status, now, job_id))
 
-    def set_result(self, job_id: str, result: dict[str, Any], *, latency_ms: float | None = None, cost_usd: float | None = None) -> None:
+    def set_result(
+        self, job_id: str, result: dict[str, Any], *, latency_ms: float | None = None, cost_usd: float | None = None
+    ) -> None:
         now = datetime.now(UTC).isoformat()
         with self._conn() as conn:
             conn.execute(
@@ -128,7 +129,9 @@ class MetadataDb:
                 ("finished", json.dumps(result, ensure_ascii=False), now, latency_ms, cost_usd, job_id),
             )
 
-    def set_error(self, job_id: str, error_text: str, *, latency_ms: float | None = None, cost_usd: float | None = None) -> None:
+    def set_error(
+        self, job_id: str, error_text: str, *, latency_ms: float | None = None, cost_usd: float | None = None
+    ) -> None:
         now = datetime.now(UTC).isoformat()
         with self._conn() as conn:
             conn.execute(
@@ -196,7 +199,16 @@ class MetadataDb:
             )
         return out
 
-    def log_audit(self, *, actor: str, role: str, action: str, resource: str, metadata: dict[str, Any] | None = None, tenant_id: str = "default") -> None:
+    def log_audit(
+        self,
+        *,
+        actor: str,
+        role: str,
+        action: str,
+        resource: str,
+        metadata: dict[str, Any] | None = None,
+        tenant_id: str = "default",
+    ) -> None:
         now = datetime.now(UTC).isoformat()
         payload = json.dumps(metadata or {}, ensure_ascii=False)
         with self._conn() as conn:
@@ -361,7 +373,13 @@ class MetadataDb:
                     updated_at_utc = ?
                 WHERE id = ?
                 """,
-                (status, json.dumps(channels, ensure_ascii=False) if channels is not None else None, error_text, now, int(alert_id)),
+                (
+                    status,
+                    json.dumps(channels, ensure_ascii=False) if channels is not None else None,
+                    error_text,
+                    now,
+                    int(alert_id),
+                ),
             )
 
     def list_alerts(self, *, tenant_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:

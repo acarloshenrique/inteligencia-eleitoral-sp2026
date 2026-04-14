@@ -24,7 +24,17 @@ def _paths(root: Path) -> AppPaths:
     catalog_root = gold_root / "_catalog"
     chroma = root / "chromadb"
     runtime_reports_root = root / "runtime_rel"
-    for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+    for p in [
+        ingestion_root,
+        bronze_root,
+        silver_root,
+        gold_root,
+        gold_reports_root,
+        gold_serving_root,
+        catalog_root,
+        chroma,
+        runtime_reports_root,
+    ]:
         p.mkdir(parents=True, exist_ok=True)
     return AppPaths(
         data_root=root,
@@ -94,9 +104,13 @@ def test_automated_ingestion_downloads_validates_and_promotes(monkeypatch):
             target = output_dir / asset.file_name
             output_dir.mkdir(parents=True, exist_ok=True)
             if asset.file_name.endswith(".parquet"):
-                pd.DataFrame([{"ranking_final": 1, "municipio": "Sao Paulo", "ano": 2026, "turno": 1}]).to_parquet(target, index=False)
+                pd.DataFrame([{"ranking_final": 1, "municipio": "Sao Paulo", "ano": 2026, "turno": 1}]).to_parquet(
+                    target, index=False
+                )
             else:
-                pd.DataFrame([{"codigo_tse": "71072", "codigo_ibge": "3550308", "nome_municipio": "Sao Paulo", "aliases": ""}]).to_csv(target, index=False)
+                pd.DataFrame(
+                    [{"codigo_tse": "71072", "codigo_ibge": "3550308", "nome_municipio": "Sao Paulo", "aliases": ""}]
+                ).to_csv(target, index=False)
             return {
                 "asset": asset.name,
                 "status": "downloaded",

@@ -46,6 +46,7 @@ class FiscalRow(BaseModel):
     transferencias: float | None = Field(default=None, ge=0)
     emendas: float | None = Field(default=None, ge=0)
 
+
 class PaidMediaAdsRow(BaseModel):
     codigo_ibge: str | int = Field()
     plataforma: str | None = None

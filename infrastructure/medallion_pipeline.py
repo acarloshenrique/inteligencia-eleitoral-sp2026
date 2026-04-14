@@ -79,13 +79,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _normalize_text(value: str) -> str:
-    ascii_text = (
-        unicodedata.normalize("NFKD", str(value))
-        .encode("ascii", "ignore")
-        .decode("ascii")
-        .strip()
-        .lower()
-    )
+    ascii_text = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii").strip().lower()
     return " ".join(ascii_text.split())
 
 
@@ -224,7 +218,9 @@ def _build_dim_tempo(
                 "semana": int(iso.week),
                 "ano_semana_iso": f"{iso.year}-W{int(iso.week):02d}",
                 "dia_semana": current.weekday() + 1,
-                "nome_dia_semana": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"][current.weekday()],
+                "nome_dia_semana": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"][
+                    current.weekday()
+                ],
                 "trimestre": (current.month - 1) // 3 + 1,
                 "ciclo_eleitoral": current.year,
                 "fase_calendario": phase,
@@ -256,7 +252,9 @@ def _resolve_temporal_fields(base: pd.DataFrame, inputs: MedallionInputs) -> tup
     ano = base["ano"] if "ano" in base.columns else pd.Series([inputs.ano] * len(base), index=base.index, dtype="Int64")
     mes = base["mes"] if "mes" in base.columns else pd.Series([inputs.mes] * len(base), index=base.index, dtype="Int64")
     turno = (
-        base["turno"] if "turno" in base.columns else pd.Series([inputs.turno] * len(base), index=base.index, dtype="Int64")
+        base["turno"]
+        if "turno" in base.columns
+        else pd.Series([inputs.turno] * len(base), index=base.index, dtype="Int64")
     )
     return (
         pd.to_numeric(ano, errors="coerce").astype("Int64"),
@@ -400,7 +398,9 @@ def _build_dim_municipio(mapping_csv_path: Path) -> tuple[pd.DataFrame, pd.DataF
     for _, row in dim.iterrows():
         aliases = []
         if alias_col:
-            src = mapping_df.loc[mapping_df[codigo_ibge_col].map(_normalize_ibge7) == row["municipio_id_ibge7"], alias_col]
+            src = mapping_df.loc[
+                mapping_df[codigo_ibge_col].map(_normalize_ibge7) == row["municipio_id_ibge7"], alias_col
+            ]
             if not src.empty:
                 aliases.extend([_normalize_text(a.strip()) for a in str(src.iloc[0]).split(";") if a.strip()])
         alias_map[str(row["municipio_id_ibge7"])] = aliases
@@ -441,7 +441,9 @@ def _build_dim_territorio(
         uf = str(row[uf_col]).strip().upper() if uf_col else inputs.uf
         latitude = pd.to_numeric(row[lat_col], errors="coerce") if lat_col else pd.NA
         longitude = pd.to_numeric(row[lon_col], errors="coerce") if lon_col else pd.NA
-        geohash = _encode_geohash(None if pd.isna(latitude) else float(latitude), None if pd.isna(longitude) else float(longitude))
+        geohash = _encode_geohash(
+            None if pd.isna(latitude) else float(latitude), None if pd.isna(longitude) else float(longitude)
+        )
         base_rows.append(
             {
                 "territorio_id": f"mun:{codigo_ibge}:0:0",
@@ -534,7 +536,6 @@ def _build_dim_territorio(
     return validate_silver_dim_territorio(dim_territorio)
 
 
-
 def _add_dim_territorio_business_keys(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["cod_tse"] = out["cod_tse_municipio"].astype(str).str.strip()
@@ -554,7 +555,10 @@ def _add_dim_territorio_business_keys(df: pd.DataFrame) -> pd.DataFrame:
         source_columns=["cod_tse", "cod_ibge", "municipio", "zona", "secao", "geolocalizacao"],
     )
 
-def _build_silver_fato_municipio(base_df: pd.DataFrame, dim_alias: pd.DataFrame, dim_municipio: pd.DataFrame, inputs: MedallionInputs) -> pd.DataFrame:
+
+def _build_silver_fato_municipio(
+    base_df: pd.DataFrame, dim_alias: pd.DataFrame, dim_municipio: pd.DataFrame, inputs: MedallionInputs
+) -> pd.DataFrame:
     if "municipio" not in base_df.columns or "ranking_final" not in base_df.columns:
         raise MedallionPipelineError("base eleitoral deve conter colunas 'municipio' e 'ranking_final'")
     silver = base_df.copy()
@@ -730,6 +734,7 @@ def _analyze_social_message(value: Any) -> dict[str, str]:
 
     return {"tema": tema, "emocao": emocao, "narrativa": narrativa, "publico_alvo": publico}
 
+
 def _build_silver_paid_media_ads(frames: list[tuple[str, pd.DataFrame]]) -> pd.DataFrame:
     normalized: list[pd.DataFrame] = []
     for default_platform, df in frames:
@@ -738,10 +743,14 @@ def _build_silver_paid_media_ads(frames: list[tuple[str, pd.DataFrame]]) -> pd.D
         ibge_col = _pick_column(df, ["codigo_ibge", "cod_ibge", "id_municipio_ibge"], label="codigo_ibge")
         out = pd.DataFrame(index=df.index)
         out["municipio_id_ibge7"] = df[ibge_col].map(_normalize_ibge7)
-        out["plataforma"] = _media_text_column(df, ["plataforma", "platform", "canal", "source_platform"], default_platform).str.lower()
+        out["plataforma"] = _media_text_column(
+            df, ["plataforma", "platform", "canal", "source_platform"], default_platform
+        ).str.lower()
         out["campanha_id"] = _media_text_column(df, ["campanha_id", "campaign_id", "id_campanha"], "")
         out["campanha_nome"] = _media_text_column(df, ["campanha_nome", "campaign_name", "campanha"], "")
-        out["criativo"] = _media_text_column(df, ["criativo", "creative", "ad_name", "creative_name", "nome_criativo"], "")
+        out["criativo"] = _media_text_column(
+            df, ["criativo", "creative", "ad_name", "creative_name", "nome_criativo"], ""
+        )
         out["criativo_id"] = _media_text_column(df, ["criativo_id", "creative_id", "ad_id"], "")
         out["mensagem"] = _media_text_column(df, ["mensagem", "message", "ad_text", "texto", "copy", "headline"], "")
         out["regiao"] = _media_text_column(df, ["regiao", "regional", "macro_regiao", "uf"], "SP").str.upper()
@@ -799,7 +808,9 @@ def _build_silver_paid_media_ads(frames: list[tuple[str, pd.DataFrame]]) -> pd.D
             paid_media[col] = 0.0
         paid_media[col] = pd.to_numeric(paid_media[col], errors="coerce").fillna(0.0).clip(lower=0.0).round(6)
     paid_media["territorio"] = "mun:" + paid_media["municipio_id_ibge7"].astype(str)
-    paid_media["campanha"] = paid_media["campanha_nome"].where(paid_media["campanha_nome"].astype(str).str.strip() != "", paid_media["campanha_id"])
+    paid_media["campanha"] = paid_media["campanha_nome"].where(
+        paid_media["campanha_nome"].astype(str).str.strip() != "", paid_media["campanha_id"]
+    )
     paid_media["performance"] = (
         (paid_media["ctr"].clip(upper=1.0) * 0.45)
         + (paid_media["taxa_conversao"].clip(upper=1.0) * 0.35)
@@ -811,14 +822,47 @@ def _build_silver_paid_media_ads(frames: list[tuple[str, pd.DataFrame]]) -> pd.D
     paid_media = paid_media[paid_media["municipio_id_ibge7"].astype(str).str.strip() != ""].reset_index(drop=True)
     return apply_row_quality_scores(
         paid_media,
-        critical_columns=["municipio_id_ibge7", "territorio", "campanha", "plataforma", "gasto", "impressoes", "cliques"],
-        source_columns=["gasto", "impressoes", "cliques", "ctr", "cpc", "conversao", "criativo", "mensagem", "tema", "narrativa"],
+        critical_columns=[
+            "municipio_id_ibge7",
+            "territorio",
+            "campanha",
+            "plataforma",
+            "gasto",
+            "impressoes",
+            "cliques",
+        ],
+        source_columns=[
+            "gasto",
+            "impressoes",
+            "cliques",
+            "ctr",
+            "cpc",
+            "conversao",
+            "criativo",
+            "mensagem",
+            "tema",
+            "narrativa",
+        ],
     )
 
 
 def _build_mart_paid_media_municipio(silver_paid_media: pd.DataFrame) -> pd.DataFrame:
     if silver_paid_media.empty:
-        return pd.DataFrame(columns=["municipio_id_ibge7", "plataforma", "gasto", "impressoes", "cliques", "ctr", "cpc", "conversao", "taxa_conversao", "coverage", "data_quality_score"])
+        return pd.DataFrame(
+            columns=[
+                "municipio_id_ibge7",
+                "plataforma",
+                "gasto",
+                "impressoes",
+                "cliques",
+                "ctr",
+                "cpc",
+                "conversao",
+                "taxa_conversao",
+                "coverage",
+                "data_quality_score",
+            ]
+        )
     grouped = (
         silver_paid_media.groupby(["municipio_id_ibge7", "plataforma"], dropna=False)
         .agg(
@@ -840,6 +884,7 @@ def _build_mart_paid_media_municipio(silver_paid_media: pd.DataFrame) -> pd.Data
         critical_columns=["municipio_id_ibge7", "plataforma", "gasto", "impressoes", "cliques"],
         source_columns=["gasto", "impressoes", "cliques", "ctr", "cpc", "conversao"],
     )
+
 
 def _build_mart_social_message_territorial(fact_social: pd.DataFrame, dim_territorio: pd.DataFrame) -> pd.DataFrame:
     if fact_social.empty:
@@ -869,7 +914,9 @@ def _build_mart_social_message_territorial(fact_social: pd.DataFrame, dim_territ
     municipio_names = pd.DataFrame(columns=["municipio_id_ibge7", "municipio"])
     if not dim_territorio.empty and {"cod_ibge", "municipio", "zona", "secao"}.issubset(dim_territorio.columns):
         municipio_names = (
-            dim_territorio.loc[dim_territorio["zona"].isna() & dim_territorio["secao"].isna(), ["cod_ibge", "municipio"]]
+            dim_territorio.loc[
+                dim_territorio["zona"].isna() & dim_territorio["secao"].isna(), ["cod_ibge", "municipio"]
+            ]
             .rename(columns={"cod_ibge": "municipio_id_ibge7"})
             .drop_duplicates(subset=["municipio_id_ibge7"])
         )
@@ -892,7 +939,9 @@ def _build_mart_social_message_territorial(fact_social: pd.DataFrame, dim_territ
         grouped[col] = pd.to_numeric(grouped[col], errors="coerce").fillna(0.0).clip(lower=0.0).round(6)
     grouped = grouped.merge(municipio_names, on="municipio_id_ibge7", how="left")
     grouped["municipio"] = grouped["municipio"].fillna(grouped["municipio_id_ibge7"])
-    grouped = grouped.sort_values(["municipio_id_ibge7", "performance", "ctr", "conversao"], ascending=[True, False, False, False])
+    grouped = grouped.sort_values(
+        ["municipio_id_ibge7", "performance", "ctr", "conversao"], ascending=[True, False, False, False]
+    )
     grouped["ranking_mensagem_cidade"] = grouped.groupby("municipio_id_ibge7").cumcount() + 1
     return apply_row_quality_scores(
         grouped,
@@ -943,6 +992,7 @@ def _build_mart_social_channel_region(fact_social: pd.DataFrame) -> pd.DataFrame
         critical_columns=["regiao", "plataforma", "performance"],
         source_columns=["gasto", "impressoes", "cliques", "conversao", "ctr", "cpc", "performance"],
     )
+
 
 def _normalize_metric(df: pd.DataFrame, column: str) -> pd.Series:
     values = pd.to_numeric(df[column], errors="coerce")
@@ -1027,7 +1077,9 @@ def _build_gold_marts(
         scope_df.groupby(["municipio_id_ibge7"], dropna=False)
         .agg(
             ranking_medio_3ciclos=("ranking_final", "mean"),
-            indice_medio_3ciclos=("indice_final", "mean") if "indice_final" in scope_df.columns else ("ranking_final", "mean"),
+            indice_medio_3ciclos=("indice_final", "mean")
+            if "indice_final" in scope_df.columns
+            else ("ranking_final", "mean"),
             anos_observados=("ano", "nunique"),
         )
         .reset_index()
@@ -1071,19 +1123,24 @@ def _build_gold_marts(
     )
     mart_potencial["pop_norm"] = _normalize_metric(mart_potencial.fillna({"pop_total": 0.0}), "pop_total")
     mart_potencial["renda_norm"] = _normalize_metric(mart_potencial.fillna({"renda_media": 0.0}), "renda_media")
-    mart_potencial["educacao_norm"] = _normalize_metric(mart_potencial.fillna({"educacao_indice": 0.0}), "educacao_indice")
-    mart_potencial["internet_norm"] = _normalize_metric(mart_potencial.fillna({"acesso_internet_pct": 0.0}), "acesso_internet_pct")
-    mart_potencial["urbanizacao_norm"] = _normalize_metric(mart_potencial.fillna({"urbanizacao_pct": 0.0}), "urbanizacao_pct")
-    mart_potencial["potencial_eleitoral_ajustado_social"] = (
-        pd.to_numeric(mart_potencial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-        * (
-            0.30 * mart_potencial["pop_norm"]
-            + 0.20 * mart_potencial["renda_norm"]
-            + 0.20 * mart_potencial["educacao_norm"]
-            + 0.15 * mart_potencial["internet_norm"]
-            + 0.15 * mart_potencial["urbanizacao_norm"]
-            + 1.0
-        )
+    mart_potencial["educacao_norm"] = _normalize_metric(
+        mart_potencial.fillna({"educacao_indice": 0.0}), "educacao_indice"
+    )
+    mart_potencial["internet_norm"] = _normalize_metric(
+        mart_potencial.fillna({"acesso_internet_pct": 0.0}), "acesso_internet_pct"
+    )
+    mart_potencial["urbanizacao_norm"] = _normalize_metric(
+        mart_potencial.fillna({"urbanizacao_pct": 0.0}), "urbanizacao_pct"
+    )
+    mart_potencial["potencial_eleitoral_ajustado_social"] = pd.to_numeric(
+        mart_potencial["indice_medio_3ciclos"], errors="coerce"
+    ).fillna(0.0) * (
+        0.30 * mart_potencial["pop_norm"]
+        + 0.20 * mart_potencial["renda_norm"]
+        + 0.20 * mart_potencial["educacao_norm"]
+        + 0.15 * mart_potencial["internet_norm"]
+        + 0.15 * mart_potencial["urbanizacao_norm"]
+        + 1.0
     )
     mart_potencial["janela_anos"] = ",".join(str(y) for y in sorted(years_selected)) if years_selected else ""
 
@@ -1131,9 +1188,13 @@ def _build_gold_marts(
         mart_territorial.fillna({"ruralidade_pct": 0.0}),
         "ruralidade_pct",
     )
-    mart_territorial["score_priorizacao_territorial_sp"] = (
-        pd.to_numeric(mart_territorial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-        * (0.45 * mart_territorial["ipvs_norm"] + 0.30 * mart_territorial["emprego_norm"] + 0.25 * mart_territorial["saude_norm"] + 1.0)
+    mart_territorial["score_priorizacao_territorial_sp"] = pd.to_numeric(
+        mart_territorial["indice_medio_3ciclos"], errors="coerce"
+    ).fillna(0.0) * (
+        0.45 * mart_territorial["ipvs_norm"]
+        + 0.30 * mart_territorial["emprego_norm"]
+        + 0.25 * mart_territorial["saude_norm"]
+        + 1.0
     )
     custo_mobilizacao = (
         0.30 * (1.0 - mart_territorial["estrutura_urbana_norm"])
@@ -1195,18 +1256,21 @@ def _build_gold_marts(
     mart_sensibilidade["transferencias_3ciclos"] = pd.to_numeric(
         mart_sensibilidade.get("transferencias_3ciclos"), errors="coerce"
     ).fillna(0.0)
-    mart_sensibilidade["emendas_3ciclos"] = pd.to_numeric(mart_sensibilidade.get("emendas_3ciclos"), errors="coerce").fillna(0.0)
+    mart_sensibilidade["emendas_3ciclos"] = pd.to_numeric(
+        mart_sensibilidade.get("emendas_3ciclos"), errors="coerce"
+    ).fillna(0.0)
     mart_sensibilidade["investimento_publico_3ciclos"] = pd.to_numeric(
         mart_sensibilidade.get("investimento_publico_3ciclos"), errors="coerce"
     ).fillna(0.0)
-    mart_sensibilidade["sensibilidade_investimento_publico"] = (
-        pd.to_numeric(mart_sensibilidade["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-        / (mart_sensibilidade["investimento_publico_3ciclos"] + 1.0)
-    )
+    mart_sensibilidade["sensibilidade_investimento_publico"] = pd.to_numeric(
+        mart_sensibilidade["indice_medio_3ciclos"], errors="coerce"
+    ).fillna(0.0) / (mart_sensibilidade["investimento_publico_3ciclos"] + 1.0)
     mart_sensibilidade["janela_anos"] = ",".join(str(y) for y in sorted(years_selected)) if years_selected else ""
 
     mart_municipio = base_metrics.merge(
-        silver_socio.drop(columns=["codigo_ibge"], errors="ignore") if not silver_socio.empty else pd.DataFrame(columns=["municipio_id_ibge7"]),
+        silver_socio.drop(columns=["codigo_ibge"], errors="ignore")
+        if not silver_socio.empty
+        else pd.DataFrame(columns=["municipio_id_ibge7"]),
         on="municipio_id_ibge7",
         how="left",
     )
@@ -1239,7 +1303,11 @@ def _build_gold_marts(
     else:
         trend_base = (
             scope_df.groupby(["municipio_id_ibge7", "ano", "turno"], dropna=False)
-            .agg(indice_medio=("indice_final", "mean") if "indice_final" in scope_df.columns else ("ranking_final", "mean"))
+            .agg(
+                indice_medio=("indice_final", "mean")
+                if "indice_final" in scope_df.columns
+                else ("ranking_final", "mean")
+            )
             .reset_index()
         )
         mart_tendencia = (
@@ -1373,9 +1441,7 @@ def _build_gold_marts_duckdb(
                 """
             ).df()
 
-        mart_contexto = conn.execute(
-            "SELECT DISTINCT * FROM silver_socio"
-        ).df()
+        mart_contexto = conn.execute("SELECT DISTINCT * FROM silver_socio").df()
 
         mart_potencial = conn.execute(
             """
@@ -1415,7 +1481,9 @@ def _build_gold_marts_duckdb(
 
         fiscal_scope = silver_fiscal.copy()
         if years_selected and "ano" in fiscal_scope.columns:
-            fiscal_scope = fiscal_scope[pd.to_numeric(fiscal_scope["ano"], errors="coerce").astype("Int64").isin(years_selected)]
+            fiscal_scope = fiscal_scope[
+                pd.to_numeric(fiscal_scope["ano"], errors="coerce").astype("Int64").isin(years_selected)
+            ]
         conn.register("silver_fiscal_scope", fiscal_scope)
         mart_sensibilidade = conn.execute(
             """
@@ -1454,9 +1522,7 @@ def _build_gold_marts_duckdb(
         mart_municipio["canonical_key"] = mart_municipio["municipio_id_ibge7"].map(
             lambda v: f"{v}:{max(years_selected)}:00:0" if years_selected and str(v).strip() else None
         )
-        mart_municipio["ranking_final"] = pd.to_numeric(
-            mart_municipio["ranking_medio_3ciclos"], errors="coerce"
-        )
+        mart_municipio["ranking_final"] = pd.to_numeric(mart_municipio["ranking_medio_3ciclos"], errors="coerce")
         mart_municipio["janela_anos"] = janela
         mart_municipio = validate_gold_mart_municipio_eleitoral(mart_municipio)
     mart_tendencia["janela_anos"] = janela
@@ -1465,13 +1531,21 @@ def _build_gold_marts_duckdb(
     if not mart_potencial.empty:
         mart_potencial["pop_total"] = _metric_column(mart_potencial, ["pop_total", "populacao", "pop_censo2022"])
         mart_potencial["renda_media"] = _metric_column(mart_potencial, ["renda_media", "renda", "renda_per_capita"])
-        mart_potencial["educacao_indice"] = _metric_column(mart_potencial, ["educacao_indice", "indice_educacao", "ideb"])
+        mart_potencial["educacao_indice"] = _metric_column(
+            mart_potencial, ["educacao_indice", "indice_educacao", "ideb"]
+        )
         mart_potencial["pop_norm"] = _normalize_metric(mart_potencial.fillna({"pop_total": 0.0}), "pop_total")
         mart_potencial["renda_norm"] = _normalize_metric(mart_potencial.fillna({"renda_media": 0.0}), "renda_media")
-        mart_potencial["educacao_norm"] = _normalize_metric(mart_potencial.fillna({"educacao_indice": 0.0}), "educacao_indice")
-        mart_potencial["potencial_eleitoral_ajustado_social"] = (
-            pd.to_numeric(mart_potencial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-            * (0.4 * mart_potencial["pop_norm"] + 0.3 * mart_potencial["renda_norm"] + 0.3 * mart_potencial["educacao_norm"] + 1.0)
+        mart_potencial["educacao_norm"] = _normalize_metric(
+            mart_potencial.fillna({"educacao_indice": 0.0}), "educacao_indice"
+        )
+        mart_potencial["potencial_eleitoral_ajustado_social"] = pd.to_numeric(
+            mart_potencial["indice_medio_3ciclos"], errors="coerce"
+        ).fillna(0.0) * (
+            0.4 * mart_potencial["pop_norm"]
+            + 0.3 * mart_potencial["renda_norm"]
+            + 0.3 * mart_potencial["educacao_norm"]
+            + 1.0
         )
         mart_potencial["janela_anos"] = janela
 
@@ -1482,20 +1556,22 @@ def _build_gold_marts_duckdb(
         mart_territorial["ipvs_norm"] = _normalize_metric(mart_territorial.fillna({"ipvs": 0.0}), "ipvs")
         mart_territorial["emprego_norm"] = _normalize_metric(mart_territorial.fillna({"emprego": 0.0}), "emprego")
         mart_territorial["saude_norm"] = _normalize_metric(mart_territorial.fillna({"saude": 0.0}), "saude")
-        mart_territorial["score_priorizacao_territorial_sp"] = (
-            pd.to_numeric(mart_territorial["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-            * (0.45 * mart_territorial["ipvs_norm"] + 0.30 * mart_territorial["emprego_norm"] + 0.25 * mart_territorial["saude_norm"] + 1.0)
+        mart_territorial["score_priorizacao_territorial_sp"] = pd.to_numeric(
+            mart_territorial["indice_medio_3ciclos"], errors="coerce"
+        ).fillna(0.0) * (
+            0.45 * mart_territorial["ipvs_norm"]
+            + 0.30 * mart_territorial["emprego_norm"]
+            + 0.25 * mart_territorial["saude_norm"]
+            + 1.0
         )
         mart_territorial["janela_anos"] = janela
 
-    mart_sensibilidade["investimento_publico_3ciclos"] = (
-        pd.to_numeric(mart_sensibilidade["transferencias_3ciclos"], errors="coerce").fillna(0.0)
-        + pd.to_numeric(mart_sensibilidade["emendas_3ciclos"], errors="coerce").fillna(0.0)
-    )
-    mart_sensibilidade["sensibilidade_investimento_publico"] = (
-        pd.to_numeric(mart_sensibilidade["indice_medio_3ciclos"], errors="coerce").fillna(0.0)
-        / (mart_sensibilidade["investimento_publico_3ciclos"] + 1.0)
-    )
+    mart_sensibilidade["investimento_publico_3ciclos"] = pd.to_numeric(
+        mart_sensibilidade["transferencias_3ciclos"], errors="coerce"
+    ).fillna(0.0) + pd.to_numeric(mart_sensibilidade["emendas_3ciclos"], errors="coerce").fillna(0.0)
+    mart_sensibilidade["sensibilidade_investimento_publico"] = pd.to_numeric(
+        mart_sensibilidade["indice_medio_3ciclos"], errors="coerce"
+    ).fillna(0.0) / (mart_sensibilidade["investimento_publico_3ciclos"] + 1.0)
     mart_sensibilidade["janela_anos"] = janela
 
     return {
@@ -1506,8 +1582,6 @@ def _build_gold_marts_duckdb(
         "mart_priorizacao_territorial_sp": mart_territorial,
         "mart_sensibilidade_investimento_publico": mart_sensibilidade,
     }
-
-
 
 
 def _build_feature_store_eleitoral(
@@ -1558,11 +1632,12 @@ def _build_feature_store_eleitoral(
             )
             .reset_index()
         )
-        ranking_stats["crescimento_eleitoral"] = (
-            pd.to_numeric(ranking_stats["indice_ultimo"], errors="coerce").fillna(0.0)
-            - pd.to_numeric(ranking_stats["indice_primeiro"], errors="coerce").fillna(0.0)
+        ranking_stats["crescimento_eleitoral"] = pd.to_numeric(ranking_stats["indice_ultimo"], errors="coerce").fillna(
+            0.0
+        ) - pd.to_numeric(ranking_stats["indice_primeiro"], errors="coerce").fillna(0.0)
+        ranking_stats["competitividade"] = 1.0 / (
+            pd.to_numeric(ranking_stats["ranking_medio"], errors="coerce").fillna(0.0) + 1.0
         )
-        ranking_stats["competitividade"] = 1.0 / (pd.to_numeric(ranking_stats["ranking_medio"], errors="coerce").fillna(0.0) + 1.0)
         base = base.merge(
             ranking_stats[
                 [
@@ -1602,7 +1677,9 @@ def _build_feature_store_eleitoral(
         )
         secao_agg["densidade_eleitoral"] = secao_agg["votos_validos"] / secao_agg["secoes"].replace(0, pd.NA)
         secao_agg["abstencao"] = 1.0 - (secao_agg["votos_validos"] / secao_agg["eleitores_aptos"].replace(0, pd.NA))
-        base = base.merge(secao_agg[["municipio_id_ibge7", "densidade_eleitoral", "abstencao"]], on="municipio_id_ibge7", how="left")
+        base = base.merge(
+            secao_agg[["municipio_id_ibge7", "densidade_eleitoral", "abstencao"]], on="municipio_id_ibge7", how="left"
+        )
     else:
         base["densidade_eleitoral"] = 0.0
         base["abstencao"] = 0.0
@@ -1612,7 +1689,13 @@ def _build_feature_store_eleitoral(
     if base["ano_ref"].isna().all() and not mart_municipio.empty and "ano" in mart_municipio.columns:
         base["ano_ref"] = pd.to_numeric(mart_municipio["ano"], errors="coerce").max()
     base["feature_set_id"] = run_id
-    for col in ["densidade_eleitoral", "volatilidade_historica", "crescimento_eleitoral", "abstencao", "competitividade"]:
+    for col in [
+        "densidade_eleitoral",
+        "volatilidade_historica",
+        "crescimento_eleitoral",
+        "abstencao",
+        "competitividade",
+    ]:
         base[col] = pd.to_numeric(base.get(col), errors="coerce").fillna(0.0).round(6)
     base["abstencao"] = base["abstencao"].clip(lower=0.0, upper=1.0)
     base = apply_row_quality_scores(
@@ -1642,7 +1725,9 @@ def _build_feature_store_eleitoral(
     ]
 
 
-def _materialize_feature_store(paths: AppPaths, run_id: str, features: pd.DataFrame, pipeline_version: str) -> dict[str, Any]:
+def _materialize_feature_store(
+    paths: AppPaths, run_id: str, features: pd.DataFrame, pipeline_version: str
+) -> dict[str, Any]:
     paths.features_root.mkdir(parents=True, exist_ok=True)
     feature_path = paths.features_root / f"features_eleitorais_{run_id}.parquet"
     latest_path = paths.features_root / "features_eleitorais_latest.parquet"
@@ -1676,6 +1761,7 @@ def _materialize_feature_store(paths: AppPaths, run_id: str, features: pd.DataFr
     }
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"feature_path": str(feature_path), "latest_path": str(latest_path), "manifest_path": str(manifest_path)}
+
 
 def _materialize_serving_layer(
     *,
@@ -1711,9 +1797,7 @@ def _materialize_serving_layer(
                         f"CREATE INDEX IF NOT EXISTS idx_{safe_table}_municipio ON {safe_table}(municipio_id_ibge7)"
                     )  # nosec B608
                 if "canonical_key" in df.columns:
-                    conn.execute(
-                        f"CREATE INDEX IF NOT EXISTS idx_{safe_table}_ckey ON {safe_table}(canonical_key)"
-                    )  # nosec B608
+                    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{safe_table}_ckey ON {safe_table}(canonical_key)")  # nosec B608
                 conn.execute(f"ANALYZE {safe_table}")  # nosec B608
                 row_count = int(conn.execute(f"SELECT COUNT(*) FROM {safe_table}").fetchone()[0])  # nosec B608
                 table_stats.append({"table": safe_table, "rows": row_count})
@@ -1751,21 +1835,27 @@ def _materialize_serving_layer(
         cache_df = (
             marts.get("mart_municipio_eleitoral", pd.DataFrame())
             .merge(
-                marts.get("mart_potencial_eleitoral_social", pd.DataFrame())[["municipio_id_ibge7", "potencial_eleitoral_ajustado_social"]]
+                marts.get("mart_potencial_eleitoral_social", pd.DataFrame())[
+                    ["municipio_id_ibge7", "potencial_eleitoral_ajustado_social"]
+                ]
                 if "mart_potencial_eleitoral_social" in marts
                 else pd.DataFrame(columns=["municipio_id_ibge7", "potencial_eleitoral_ajustado_social"]),
                 on="municipio_id_ibge7",
                 how="left",
             )
             .merge(
-                marts.get("mart_priorizacao_territorial_sp", pd.DataFrame())[["municipio_id_ibge7", "score_priorizacao_territorial_sp"]]
+                marts.get("mart_priorizacao_territorial_sp", pd.DataFrame())[
+                    ["municipio_id_ibge7", "score_priorizacao_territorial_sp"]
+                ]
                 if "mart_priorizacao_territorial_sp" in marts
                 else pd.DataFrame(columns=["municipio_id_ibge7", "score_priorizacao_territorial_sp"]),
                 on="municipio_id_ibge7",
                 how="left",
             )
             .merge(
-                marts.get("mart_sensibilidade_investimento_publico", pd.DataFrame())[["municipio_id_ibge7", "sensibilidade_investimento_publico"]]
+                marts.get("mart_sensibilidade_investimento_publico", pd.DataFrame())[
+                    ["municipio_id_ibge7", "sensibilidade_investimento_publico"]
+                ]
                 if "mart_sensibilidade_investimento_publico" in marts
                 else pd.DataFrame(columns=["municipio_id_ibge7", "sensibilidade_investimento_publico"]),
                 on="municipio_id_ibge7",
@@ -1794,7 +1884,9 @@ def _materialize_serving_layer(
     }
 
 
-def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_version: str = "medallion_v1") -> dict[str, Any]:
+def run_medallion_pipeline(
+    paths: AppPaths, inputs: MedallionInputs, pipeline_version: str = "medallion_v1"
+) -> dict[str, Any]:
     run_id = _ts_now_compact()
     run_dir = paths.ingestion_root / "pipeline_runs" / pipeline_version / run_id
     bronze_dir = run_dir / "bronze"
@@ -1873,15 +1965,49 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
     _save_incremental_state(lake_root, incremental_state)
 
     base_df = pd.read_parquet(inputs.base_parquet_path)
-    socio_df = pd.read_csv(inputs.socio_csv_path) if inputs.socio_csv_path and inputs.socio_csv_path.exists() else pd.DataFrame()
-    secao_df = pd.read_csv(inputs.secao_csv_path) if inputs.secao_csv_path and inputs.secao_csv_path.exists() else pd.DataFrame()
-    ibge_df = pd.read_csv(inputs.ibge_csv_path) if inputs.ibge_csv_path and inputs.ibge_csv_path.exists() else pd.DataFrame()
-    seade_df = pd.read_csv(inputs.seade_csv_path) if inputs.seade_csv_path and inputs.seade_csv_path.exists() else pd.DataFrame()
-    social_df = pd.read_csv(inputs.social_csv_path) if inputs.social_csv_path and inputs.social_csv_path.exists() else pd.DataFrame()
-    meta_ads_df = pd.read_csv(inputs.meta_ads_csv_path) if inputs.meta_ads_csv_path and inputs.meta_ads_csv_path.exists() else pd.DataFrame()
-    google_ads_df = pd.read_csv(inputs.google_ads_csv_path) if inputs.google_ads_csv_path and inputs.google_ads_csv_path.exists() else pd.DataFrame()
-    paid_media_contract_df = pd.concat([df for df in [social_df, meta_ads_df, google_ads_df] if not df.empty], ignore_index=True) if any(not df.empty for df in [social_df, meta_ads_df, google_ads_df]) else pd.DataFrame()
-    fiscal_df = pd.read_csv(inputs.fiscal_csv_path) if inputs.fiscal_csv_path and inputs.fiscal_csv_path.exists() else pd.DataFrame()
+    socio_df = (
+        pd.read_csv(inputs.socio_csv_path)
+        if inputs.socio_csv_path and inputs.socio_csv_path.exists()
+        else pd.DataFrame()
+    )
+    secao_df = (
+        pd.read_csv(inputs.secao_csv_path)
+        if inputs.secao_csv_path and inputs.secao_csv_path.exists()
+        else pd.DataFrame()
+    )
+    ibge_df = (
+        pd.read_csv(inputs.ibge_csv_path) if inputs.ibge_csv_path and inputs.ibge_csv_path.exists() else pd.DataFrame()
+    )
+    seade_df = (
+        pd.read_csv(inputs.seade_csv_path)
+        if inputs.seade_csv_path and inputs.seade_csv_path.exists()
+        else pd.DataFrame()
+    )
+    social_df = (
+        pd.read_csv(inputs.social_csv_path)
+        if inputs.social_csv_path and inputs.social_csv_path.exists()
+        else pd.DataFrame()
+    )
+    meta_ads_df = (
+        pd.read_csv(inputs.meta_ads_csv_path)
+        if inputs.meta_ads_csv_path and inputs.meta_ads_csv_path.exists()
+        else pd.DataFrame()
+    )
+    google_ads_df = (
+        pd.read_csv(inputs.google_ads_csv_path)
+        if inputs.google_ads_csv_path and inputs.google_ads_csv_path.exists()
+        else pd.DataFrame()
+    )
+    paid_media_contract_df = (
+        pd.concat([df for df in [social_df, meta_ads_df, google_ads_df] if not df.empty], ignore_index=True)
+        if any(not df.empty for df in [social_df, meta_ads_df, google_ads_df])
+        else pd.DataFrame()
+    )
+    fiscal_df = (
+        pd.read_csv(inputs.fiscal_csv_path)
+        if inputs.fiscal_csv_path and inputs.fiscal_csv_path.exists()
+        else pd.DataFrame()
+    )
     contract_report = validate_input_contracts(
         base_df=base_df,
         mapping_df=pd.read_csv(inputs.mapping_csv_path),
@@ -1973,7 +2099,9 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         run_id=run_id,
     )
     allocation_strategy = load_allocation_strategy(paths)
-    allocation_budget = float(inputs.allocation_budget if inputs.allocation_budget is not None else allocation_strategy.default_budget)
+    allocation_budget = float(
+        inputs.allocation_budget if inputs.allocation_budget is not None else allocation_strategy.default_budget
+    )
     allocation_scores = build_modular_allocation_scores(
         mart_municipio=gold_outputs.get("mart_municipio_eleitoral", pd.DataFrame()),
         mart_potencial=gold_outputs.get("mart_potencial_eleitoral_social", pd.DataFrame()),
@@ -2005,8 +2133,16 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
         if "coverage" not in df.columns or "data_quality_score" not in df.columns:
             df = apply_row_quality_scores(
                 df,
-                critical_columns=[col for col in ["municipio_id_ibge7", "canonical_key", "ano", "turno", "ranking_final"] if col in df.columns],
-                source_columns=[col for col in ["municipio_id_ibge7", "canonical_key", "ranking_final", "indice_final"] if col in df.columns],
+                critical_columns=[
+                    col
+                    for col in ["municipio_id_ibge7", "canonical_key", "ano", "turno", "ranking_final"]
+                    if col in df.columns
+                ],
+                source_columns=[
+                    col
+                    for col in ["municipio_id_ibge7", "canonical_key", "ranking_final", "indice_final"]
+                    if col in df.columns
+                ],
             )
             gold_outputs[name] = df
         df_lgpd, _ = apply_lgpd_purpose_policy(
@@ -2081,7 +2217,9 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
 
     settings = get_settings()
     retention_result = {
-        "pipeline_runs": enforce_retention_policy(paths.ingestion_root / "pipeline_runs", retention_days=settings.retention_days),
+        "pipeline_runs": enforce_retention_policy(
+            paths.ingestion_root / "pipeline_runs", retention_days=settings.retention_days
+        ),
         "lake": enforce_retention_policy(paths.lake_root, retention_days=settings.retention_days),
         "serving": enforce_retention_policy(paths.gold_serving_root, retention_days=settings.retention_days),
     }
@@ -2122,8 +2260,12 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
             "allocation": {
                 "budget_simulado": allocation_budget,
                 "strategy_version": allocation_strategy.version,
-                "strategy_source_path": str(allocation_strategy.source_path) if allocation_strategy.source_path else None,
-                "tenant_override_path": str(allocation_strategy.tenant_override_path) if allocation_strategy.tenant_override_path else None,
+                "strategy_source_path": str(allocation_strategy.source_path)
+                if allocation_strategy.source_path
+                else None,
+                "tenant_override_path": str(allocation_strategy.tenant_override_path)
+                if allocation_strategy.tenant_override_path
+                else None,
                 "score_modular_weights": allocation_strategy.score_modular_weights.normalized(),
                 "datasets": {
                     "score_modular": published_paths.get("mart_score_alocacao_modular"),
@@ -2142,7 +2284,8 @@ def run_medallion_pipeline(paths: AppPaths, inputs: MedallionInputs, pipeline_ve
                     "Onde estou desperdicando dinheiro?",
                     "Onde tenho maior ROI politico?",
                 ],
-            },            "contracts": contract_report,
+            },
+            "contracts": contract_report,
             "quality_metrics": quality_metrics,
             "matching": {
                 "layers": [

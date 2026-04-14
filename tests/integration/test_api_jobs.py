@@ -135,6 +135,7 @@ def test_api_ops_observability_and_schedule(monkeypatch):
     from api.main import app
 
     with tempfile.TemporaryDirectory() as tmp:
+
         class _Db:
             def log_audit(self, *args, **kwargs):
                 return None

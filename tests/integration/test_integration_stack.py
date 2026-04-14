@@ -21,7 +21,17 @@ def _paths(tmp: str) -> AppPaths:
     catalog_root = gold_root / "_catalog"
     chroma = root / "chromadb"
     runtime_reports_root = root / "runtime_rel"
-    for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+    for p in [
+        ingestion_root,
+        bronze_root,
+        silver_root,
+        gold_root,
+        gold_reports_root,
+        gold_serving_root,
+        catalog_root,
+        chroma,
+        runtime_reports_root,
+    ]:
         p.mkdir(parents=True, exist_ok=True)
     return AppPaths(
         data_root=root,
@@ -159,7 +169,15 @@ def test_integration_storage_registers_product_gold_marts():
             ]
         ).to_parquet(paths.gold_root / "mart_score_alocacao_modular_20260410_120000.parquet", index=False)
         pd.DataFrame(
-            [{"municipio_id_ibge7": "3500000", "ranking": 1, "verba_sugerida": 50000, "canal_ideal": "meta_ads", "mensagem_ideal": "Emprego"}]
+            [
+                {
+                    "municipio_id_ibge7": "3500000",
+                    "ranking": 1,
+                    "verba_sugerida": 50000,
+                    "canal_ideal": "meta_ads",
+                    "mensagem_ideal": "Emprego",
+                }
+            ]
         ).to_parquet(paths.gold_root / "mart_recomendacao_alocacao_20260410_120000.parquet", index=False)
         db = carrega_db.__wrapped__(paths, df_mun)
         repo = DuckDBAnalyticsRepository(db)

@@ -77,7 +77,9 @@ def build_explainability_frame(scores: pd.DataFrame, recommendations: pd.DataFra
             for col in ["municipio_id_ibge7", "canal_ideal", "mensagem_ideal", "verba_sugerida", "justificativa"]
             if col in recommendations.columns
         ]
-        base = base.merge(recommendations[keep].drop_duplicates("municipio_id_ibge7"), on="municipio_id_ibge7", how="left")
+        base = base.merge(
+            recommendations[keep].drop_duplicates("municipio_id_ibge7"), on="municipio_id_ibge7", how="left"
+        )
 
     rows = []
     for _, row in base.iterrows():
@@ -144,7 +146,11 @@ def _worksheet_xml(df: pd.DataFrame) -> str:
             ref = f"{_column_letter(col_idx)}{row_idx}"
             cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
         rows.append(f'<row r="{row_idx}">{"".join(cells)}</row>')
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + "".join(rows) + "</sheetData></worksheet>"
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+        + "".join(rows)
+        + "</sheetData></worksheet>"
+    )
 
 
 def _minimal_xlsx_bytes(tables: Mapping[str, pd.DataFrame]) -> bytes:
@@ -153,16 +159,34 @@ def _minimal_xlsx_bytes(tables: Mapping[str, pd.DataFrame]) -> bytes:
         usable = [("status", pd.DataFrame([{"status": "Not found in repo"}]))]
     buf = BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>')
-        zf.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        zf.writestr(
+            "[Content_Types].xml",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>',
+        )
+        zf.writestr(
+            "_rels/.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        )
         sheet_entries = []
         rel_entries = []
         for idx, (raw_name, df) in enumerate(usable, start=1):
             sheet_entries.append(f'<sheet name="{escape(_sheet_name(raw_name))}" sheetId="{idx}" r:id="rId{idx}"/>')
-            rel_entries.append(f'<Relationship Id="rId{idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{idx}.xml"/>')
+            rel_entries.append(
+                f'<Relationship Id="rId{idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{idx}.xml"/>'
+            )
             zf.writestr(f"xl/worksheets/sheet{idx}.xml", _worksheet_xml(df))
-        zf.writestr("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + "".join(sheet_entries) + "</sheets></workbook>")
-        zf.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + "".join(rel_entries) + "</Relationships>")
+        zf.writestr(
+            "xl/workbook.xml",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+            + "".join(sheet_entries)
+            + "</sheets></workbook>",
+        )
+        zf.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + "".join(rel_entries)
+            + "</Relationships>",
+        )
     return buf.getvalue()
 
 
@@ -206,7 +230,11 @@ def _simple_pdf(lines: list[str]) -> bytes:
         b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
         b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
         b"4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-        b"5 0 obj\n<< /Length " + str(len(content)).encode("ascii") + b" >>\nstream\n" + content + b"\nendstream\nendobj\n",
+        b"5 0 obj\n<< /Length "
+        + str(len(content)).encode("ascii")
+        + b" >>\nstream\n"
+        + content
+        + b"\nendstream\nendobj\n",
     ]
     out = BytesIO()
     out.write(b"%PDF-1.4\n")

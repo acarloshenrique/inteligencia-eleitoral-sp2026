@@ -26,7 +26,17 @@ def test_register_dataset_version_writes_catalog_and_latest_index():
         catalog_root = gold_root / "_catalog"
         chroma = data_root / "chromadb"
         runtime_reports_root = data_root / "runtime_rel"
-        for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+        for p in [
+            ingestion_root,
+            bronze_root,
+            silver_root,
+            gold_root,
+            gold_reports_root,
+            gold_serving_root,
+            catalog_root,
+            chroma,
+            runtime_reports_root,
+        ]:
             p.mkdir(parents=True, exist_ok=True)
 
         dataset_path = gold_root / "df_mun_20260407_010101.parquet"

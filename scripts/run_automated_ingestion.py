@@ -12,7 +12,9 @@ from infrastructure.automated_ingestion import run_automated_ingestion
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Executa ingestao automatizada: download, validacao e promocao bronze/silver/gold.")
+    parser = argparse.ArgumentParser(
+        description="Executa ingestao automatizada: download, validacao e promocao bronze/silver/gold."
+    )
     parser.add_argument("--source-catalog", default="", help="Catalogo JSON com assets remotos.")
     parser.add_argument("--pipeline", default="", help="Override do pipeline: open_data ou medallion.")
     parser.add_argument("--pipeline-version", default="", help="Override da versao do pipeline.")

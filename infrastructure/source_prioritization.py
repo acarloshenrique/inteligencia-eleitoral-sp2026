@@ -119,4 +119,3 @@ def render_prioritization_report(groups: dict[str, list[SourceEvaluation]]) -> d
         "accepted_b": [_as_dict(ev) for ev in groups["accepted_b"]],
         "rejected": [_as_dict(ev) for ev in groups["rejected"]],
     }
-

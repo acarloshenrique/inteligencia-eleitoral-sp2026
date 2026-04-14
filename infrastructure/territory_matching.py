@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -151,7 +151,9 @@ def layered_match_territory(
             if candidates.empty:
                 continue
             row_id = int(row["_match_row_id"])
-            if not _apply_unique_match(base=base, row_id=row_id, candidates=candidates, method="exact_code", confidence=1.0):
+            if not _apply_unique_match(
+                base=base, row_id=row_id, candidates=candidates, method="exact_code", confidence=1.0
+            ):
                 review_rows.append(
                     _mark_manual_review(
                         base=base,
@@ -174,7 +176,9 @@ def layered_match_territory(
             if candidates.empty:
                 continue
             row_id = int(row["_match_row_id"])
-            if not _apply_unique_match(base=base, row_id=row_id, candidates=candidates, method=method, confidence=confidence):
+            if not _apply_unique_match(
+                base=base, row_id=row_id, candidates=candidates, method=method, confidence=confidence
+            ):
                 review_rows.append(
                     _mark_manual_review(
                         base=base,
@@ -216,8 +220,10 @@ def layered_match_territory(
         best = top[0] if top else None
         second = top[1] if len(top) > 1 else None
         row_id = int(row["_match_row_id"])
-        if best and best["score"] >= fuzzy_threshold and (
-            second is None or (best["score"] - second["score"]) >= ambiguous_gap
+        if (
+            best
+            and best["score"] >= fuzzy_threshold
+            and (second is None or (best["score"] - second["score"]) >= ambiguous_gap)
         ):
             mask = base["_match_row_id"] == row_id
             base.loc[mask, "municipio_id_ibge7"] = best["municipio_id_ibge7"]
@@ -242,11 +248,13 @@ def layered_match_territory(
         )
 
     base["join_status"] = base["join_method"].map(
-        lambda value: "matched"
-        if str(value) in {"exact_code", "exact_name", "historical_alias", "fuzzy_score"}
-        else "manual_review"
-        if str(value) == "manual_review"
-        else "no_match"
+        lambda value: (
+            "matched"
+            if str(value) in {"exact_code", "exact_name", "historical_alias", "fuzzy_score"}
+            else "manual_review"
+            if str(value) == "manual_review"
+            else "no_match"
+        )
     )
     base["needs_review"] = base["join_status"].eq("manual_review") | base["needs_review"].fillna(False).astype(bool)
     matched_df = base.drop(columns=["_match_row_id"])

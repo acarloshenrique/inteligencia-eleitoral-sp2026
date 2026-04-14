@@ -18,7 +18,17 @@ def _build_paths(tmp: str) -> AppPaths:
     catalog_root = gold_root / "_catalog"
     chroma = root / "chromadb"
     runtime_reports_root = root / "runtime_rel"
-    for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+    for p in [
+        ingestion_root,
+        bronze_root,
+        silver_root,
+        gold_root,
+        gold_reports_root,
+        gold_serving_root,
+        catalog_root,
+        chroma,
+        runtime_reports_root,
+    ]:
         p.mkdir(parents=True, exist_ok=True)
     return AppPaths(
         data_root=root,

@@ -19,7 +19,9 @@ class ScheduledPipeline:
     alert_on_failure: bool = True
 
 
-def build_default_schedule(*, tenant_id: str, daily_hour: int, weekly_day: str, weekly_hour: int) -> list[ScheduledPipeline]:
+def build_default_schedule(
+    *, tenant_id: str, daily_hour: int, weekly_day: str, weekly_hour: int
+) -> list[ScheduledPipeline]:
     return [
         ScheduledPipeline(
             name="ingestao_diaria",

@@ -26,13 +26,30 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         catalog_root = gold_root / "_catalog"
         chroma = data_root / "chromadb"
         runtime_reports_root = data_root / "runtime_rel"
-        for path in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+        for path in [
+            ingestion_root,
+            bronze_root,
+            silver_root,
+            gold_root,
+            gold_reports_root,
+            gold_serving_root,
+            catalog_root,
+            chroma,
+            runtime_reports_root,
+        ]:
             path.mkdir(parents=True, exist_ok=True)
 
         base_path = ingestion_root / "df_mun_20260408_010101.parquet"
         pd.DataFrame(
             [
-                {"ranking_final": 1, "municipio": "Sao Paulo", "codigo_tse": "71072", "indice_final": 90.1, "ano": 2026, "turno": 1},
+                {
+                    "ranking_final": 1,
+                    "municipio": "Sao Paulo",
+                    "codigo_tse": "71072",
+                    "indice_final": 90.1,
+                    "ano": 2026,
+                    "turno": 1,
+                },
                 {"ranking_final": 2, "municipio": "Campinas", "indice_final": 88.3, "ano": 2026, "turno": 1},
                 {"ranking_final": 3, "municipio": "SP Capital", "indice_final": 85.0, "ano": 2026, "turno": 1},
                 {"ranking_final": 4, "municipio": "Campina", "indice_final": 80.0, "ano": 2026, "turno": 1},
@@ -80,7 +97,9 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         )
         result = run_open_data_crosswalk_pipeline(
             paths=paths,
-            inputs=OpenDataInputs(base_parquet_path=base_path, mapping_csv_path=mapping_path, socio_csv_path=socio_path),
+            inputs=OpenDataInputs(
+                base_parquet_path=base_path, mapping_csv_path=mapping_path, socio_csv_path=socio_path
+            ),
             pipeline_version="open_data_test",
         )
 
@@ -90,7 +109,13 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         assert published.exists()
         df = pd.read_parquet(published)
         assert set(df["join_status"].tolist()) == {"matched", "manual_review"}
-        assert set(df["join_method"].dropna().tolist()) >= {"exact_code", "exact_name", "historical_alias", "fuzzy_score", "manual_review"}
+        assert set(df["join_method"].dropna().tolist()) >= {
+            "exact_code",
+            "exact_name",
+            "historical_alias",
+            "fuzzy_score",
+            "manual_review",
+        }
         assert "join_confidence" in df.columns
         assert "coverage" in df.columns
         assert "data_quality_score" in df.columns
@@ -121,7 +146,12 @@ def test_open_data_crosswalk_pipeline_enriches_and_catalogs():
         assert manifest["quality"]["matched_rows"] == 4
         assert manifest["quality"]["manual_review_rows"] == 1
         assert manifest["source_of_truth"]["join_key"] == "municipio_id_ibge7"
-        assert manifest["matching"]["contract_fields"] == ["join_status", "join_method", "join_confidence", "needs_review"]
+        assert manifest["matching"]["contract_fields"] == [
+            "join_status",
+            "join_method",
+            "join_confidence",
+            "needs_review",
+        ]
         assert Path(manifest["matching"]["manual_review_queue_path"]).exists()
         review_queue = pd.read_parquet(manifest["matching"]["manual_review_queue_path"])
         assert len(review_queue) == 1

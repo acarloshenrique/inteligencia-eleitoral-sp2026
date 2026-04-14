@@ -51,7 +51,12 @@ def resolve_relatorio_path(paths: AppPaths, nome_arquivo):
 
 def is_within_gold_layer(paths: AppPaths, path) -> bool:
     candidate = paths.gold_root.__class__(path).resolve()
-    allowed_roots = [paths.gold_root.resolve(), paths.gold_reports_root.resolve(), paths.gold_serving_root.resolve(), paths.catalog_root.resolve()]
+    allowed_roots = [
+        paths.gold_root.resolve(),
+        paths.gold_reports_root.resolve(),
+        paths.gold_serving_root.resolve(),
+        paths.catalog_root.resolve(),
+    ]
     return any(candidate == root or root in candidate.parents for root in allowed_roots)
 
 

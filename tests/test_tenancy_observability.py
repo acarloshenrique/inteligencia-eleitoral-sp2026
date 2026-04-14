@@ -5,7 +5,12 @@ import pytest
 from config.settings import Settings
 from infrastructure.metadata_db import MetadataDb
 from infrastructure.notifiers import NotificationResult
-from infrastructure.observability import AlertThresholds, OperationObserver, build_observability_snapshot, evaluate_and_dispatch_alerts
+from infrastructure.observability import (
+    AlertThresholds,
+    OperationObserver,
+    build_observability_snapshot,
+    evaluate_and_dispatch_alerts,
+)
 from infrastructure.operation_scheduler import build_default_schedule, load_schedule_manifest, write_schedule_manifest
 from infrastructure.tenancy import ensure_tenant_path, normalize_tenant_id
 
@@ -118,8 +123,12 @@ def test_metadata_db_lists_jobs_events_and_alerts(tmp_path):
     db = MetadataDb(tmp_path / "metadata" / "jobs.sqlite3")
     db.create_job("job-1", "ingest", {"x": 1}, tenant_id="cliente-a")
     db.set_error("job-1", "boom")
-    db.record_operational_event(tenant_id="cliente-a", event_type="job.ingest", resource="job-1", status="failed", error_text="boom")
-    alert_id = db.record_alert(tenant_id="cliente-a", severity="high", metric="error_rate", value=1, threshold=0.1, message="erro")
+    db.record_operational_event(
+        tenant_id="cliente-a", event_type="job.ingest", resource="job-1", status="failed", error_text="boom"
+    )
+    alert_id = db.record_alert(
+        tenant_id="cliente-a", severity="high", metric="error_rate", value=1, threshold=0.1, message="erro"
+    )
     db.set_alert_status(alert_id, status="sent", channels=["webhook"])
 
     assert db.list_jobs(tenant_id="cliente-a", limit=1)[0]["status"] == "failed"

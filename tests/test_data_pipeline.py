@@ -65,7 +65,17 @@ def test_data_pipeline_runs_all_steps_and_publishes_outputs():
         catalog_root = gold_root / "_catalog"
         chroma = data_root / "chromadb"
         runtime_reports_root = data_root / "runtime_rel"
-        for p in [ingestion_root, bronze_root, silver_root, gold_root, gold_reports_root, gold_serving_root, catalog_root, chroma, runtime_reports_root]:
+        for p in [
+            ingestion_root,
+            bronze_root,
+            silver_root,
+            gold_root,
+            gold_reports_root,
+            gold_serving_root,
+            catalog_root,
+            chroma,
+            runtime_reports_root,
+        ]:
             p.mkdir(parents=True, exist_ok=True)
 
         input_path = ingestion_root / "df_mun_20260407_000000.parquet"

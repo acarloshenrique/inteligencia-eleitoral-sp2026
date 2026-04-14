@@ -6,8 +6,20 @@ from infrastructure.territory_matching import build_alias_dimension, layered_mat
 def test_layered_match_flags_conflicting_exact_code_for_review():
     dim = pd.DataFrame(
         [
-            {"municipio_id_ibge7": "1111111", "codigo_tse": "100", "codigo_ibge": "1111111", "nome_municipio": "Cidade A", "municipio_norm": "cidade a"},
-            {"municipio_id_ibge7": "2222222", "codigo_tse": "100", "codigo_ibge": "2222222", "nome_municipio": "Cidade B", "municipio_norm": "cidade b"},
+            {
+                "municipio_id_ibge7": "1111111",
+                "codigo_tse": "100",
+                "codigo_ibge": "1111111",
+                "nome_municipio": "Cidade A",
+                "municipio_norm": "cidade a",
+            },
+            {
+                "municipio_id_ibge7": "2222222",
+                "codigo_tse": "100",
+                "codigo_ibge": "2222222",
+                "nome_municipio": "Cidade B",
+                "municipio_norm": "cidade b",
+            },
         ]
     )
     aliases = build_alias_dimension(dim)
@@ -32,8 +44,20 @@ def test_layered_match_flags_conflicting_exact_code_for_review():
 def test_layered_match_resolves_fuzzy_when_unambiguous():
     dim = pd.DataFrame(
         [
-            {"municipio_id_ibge7": "3550308", "codigo_tse": "71072", "codigo_ibge": "3550308", "nome_municipio": "Sao Paulo", "municipio_norm": "sao paulo"},
-            {"municipio_id_ibge7": "3509502", "codigo_tse": "62919", "codigo_ibge": "3509502", "nome_municipio": "Campinas", "municipio_norm": "campinas"},
+            {
+                "municipio_id_ibge7": "3550308",
+                "codigo_tse": "71072",
+                "codigo_ibge": "3550308",
+                "nome_municipio": "Sao Paulo",
+                "municipio_norm": "sao paulo",
+            },
+            {
+                "municipio_id_ibge7": "3509502",
+                "codigo_tse": "62919",
+                "codigo_ibge": "3509502",
+                "nome_municipio": "Campinas",
+                "municipio_norm": "campinas",
+            },
         ]
     )
     aliases = build_alias_dimension(dim)

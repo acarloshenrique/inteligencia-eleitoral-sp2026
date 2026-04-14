@@ -8,7 +8,9 @@ from infrastructure.operation_scheduler import build_default_schedule, write_sch
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Cria manifesto operacional multi-tenant para ingestao, atualizacao e alertas.")
+    parser = argparse.ArgumentParser(
+        description="Cria manifesto operacional multi-tenant para ingestao, atualizacao e alertas."
+    )
     parser.add_argument("--daily-hour", type=int, default=None)
     parser.add_argument("--weekly-day", default=None)
     parser.add_argument("--weekly-hour", type=int, default=None)

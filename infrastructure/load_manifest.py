@@ -37,12 +37,7 @@ def _detect_territorial_coverage(df: pd.DataFrame) -> dict[str, Any]:
             municipio_col = candidate
             break
     if municipio_col is not None:
-        municipios = (
-            pd.Series(df[municipio_col])
-            .dropna()
-            .astype(str)
-            .str.strip()
-        )
+        municipios = pd.Series(df[municipio_col]).dropna().astype(str).str.strip()
         coverage["municipios_cobertos"] = int(municipios[municipios != ""].nunique())
         coverage["granularidade"] = "municipio"
 

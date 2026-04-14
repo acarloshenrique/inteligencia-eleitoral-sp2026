@@ -73,6 +73,7 @@ def test_validate_alocacao_output_rejects_negative_budget():
     with pytest.raises(DataContractError):
         validate_alocacao_output(df)
 
+
 def test_validate_municipios_input_repairs_legacy_mojibake_cluster():
     legacy_cluster = "Consolida\u00e7\u00e3o".encode("utf-8").decode("latin1")
     df = pd.DataFrame(

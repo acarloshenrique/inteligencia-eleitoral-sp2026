@@ -196,7 +196,9 @@ def _node_publish(context: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run_versioned_data_pipeline(paths: AppPaths, input_path: Path, pipeline_version: str = PIPELINE_VERSION) -> dict[str, Any]:
+def run_versioned_data_pipeline(
+    paths: AppPaths, input_path: Path, pipeline_version: str = PIPELINE_VERSION
+) -> dict[str, Any]:
     run_id = _ts_now_compact()
     runs_root = paths.ingestion_root / "pipeline_runs"
     run_dir = runs_root / pipeline_version / run_id
@@ -240,4 +242,3 @@ def run_versioned_data_pipeline(paths: AppPaths, input_path: Path, pipeline_vers
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     result["manifest_path"] = str(manifest_path)
     return result
-

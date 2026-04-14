@@ -109,7 +109,7 @@ def render_tab_alocacao(paths, report_store):
         c1.metric("Total Alocado", f"R$ {total:,.0f}")
         c2.metric("Municípios", len(df_show))
         c3.metric("💎 Diamante", int((df_show["cluster"] == "Diamante").sum()))
-        c4.metric("Média/município", f"R$ {total/len(df_show):,.0f}")
+        c4.metric("Média/município", f"R$ {total / len(df_show):,.0f}")
         st.divider()
 
         cols_disp = ["municipio", "cluster"]
@@ -149,7 +149,17 @@ def render_tab_alocacao(paths, report_store):
             hide_index=True,
             column_config={
                 c: st.column_config.NumberColumn(format="R$ %.0f")
-                for c in ["Budget R$", "Digital", "Offline", "Meta FB+IG", "YouTube", "TikTok", "WhatsApp", "Rádio", "Evento"]
+                for c in [
+                    "Budget R$",
+                    "Digital",
+                    "Offline",
+                    "Meta FB+IG",
+                    "YouTube",
+                    "TikTok",
+                    "WhatsApp",
+                    "Rádio",
+                    "Evento",
+                ]
             },
         )
 
@@ -284,7 +294,9 @@ def render_tab_mobilizacao(repo):
 
 
 def render_tab_ranking(df_mun):
-    cl_opts = st.multiselect("Cluster", ["Diamante", "Alavanca", "Consolidação", "Descarte"], default=["Diamante", "Alavanca"])
+    cl_opts = st.multiselect(
+        "Cluster", ["Diamante", "Alavanca", "Consolidação", "Descarte"], default=["Diamante", "Alavanca"]
+    )
     busca = st.text_input("Buscar município", "")
 
     df_rank = df_mun[df_mun["cluster"].isin(cl_opts)].copy() if cl_opts else df_mun.copy()
@@ -325,7 +337,9 @@ def render_tab_ranking(df_mun):
         ),
         use_container_width=True,
         hide_index=True,
-        column_config={c: st.column_config.NumberColumn(format="%.1f") for c in ["Índice", "Territorial", "VS", "ISE", "PD"]},
+        column_config={
+            c: st.column_config.NumberColumn(format="%.1f") for c in ["Índice", "Territorial", "VS", "ISE", "PD"]
+        },
     )
 
 
@@ -416,14 +430,32 @@ def render_tab_midia_performance(repo):
         cpc_col = "cpc" if "cpc" in media.columns else None
         c1, c2, c3 = st.columns(3)
         c1.metric("Gasto", f"R$ {pd.to_numeric(media[gasto_col], errors='coerce').sum():,.0f}" if gasto_col else "n/d")
-        c2.metric("CTR medio", f"{pd.to_numeric(media[ctr_col], errors='coerce').mean() * 100:.2f}%" if ctr_col else "n/d")
+        c2.metric(
+            "CTR medio", f"{pd.to_numeric(media[ctr_col], errors='coerce').mean() * 100:.2f}%" if ctr_col else "n/d"
+        )
         c3.metric("CPC medio", f"R$ {pd.to_numeric(media[cpc_col], errors='coerce').mean():.2f}" if cpc_col else "n/d")
-        cols = _display_columns(media, ["municipio_id_ibge7", "municipio", "plataforma", "gasto", "impressoes", "cliques", "ctr", "cpc", "conversao", "performance"])
+        cols = _display_columns(
+            media,
+            [
+                "municipio_id_ibge7",
+                "municipio",
+                "plataforma",
+                "gasto",
+                "impressoes",
+                "cliques",
+                "ctr",
+                "cpc",
+                "conversao",
+                "performance",
+            ],
+        )
         st.dataframe(media[cols].head(80), use_container_width=True, hide_index=True)
 
     if not canais.empty:
         st.markdown("#### Canal por regiao")
-        cols = _display_columns(canais, ["regiao", "plataforma", "performance", "ranking_canal_regiao", "gasto", "ctr", "cpc"])
+        cols = _display_columns(
+            canais, ["regiao", "plataforma", "performance", "ranking_canal_regiao", "gasto", "ctr", "cpc"]
+        )
         st.dataframe(canais[cols].head(50), use_container_width=True, hide_index=True)
 
 
@@ -463,18 +495,52 @@ def render_tab_simulacao(repo):
         return
 
     if not simulations.empty:
-        cols = _display_columns(simulations, ["ranking", "municipio_id_ibge7", "verba_simulada", "impacto_incremental_estimado", "roi_politico_estimado", "desperdicio_midia", "pergunta_respondida"])
+        cols = _display_columns(
+            simulations,
+            [
+                "ranking",
+                "municipio_id_ibge7",
+                "verba_simulada",
+                "impacto_incremental_estimado",
+                "roi_politico_estimado",
+                "desperdicio_midia",
+                "pergunta_respondida",
+            ],
+        )
         st.dataframe(simulations[cols].head(50), use_container_width=True, hide_index=True)
     if not recommendations.empty:
         st.markdown("#### Recomendacao automatica")
-        cols = _display_columns(recommendations, ["ranking", "municipio_id_ibge7", "verba_sugerida", "canal_ideal", "mensagem_ideal", "justificativa"])
+        cols = _display_columns(
+            recommendations,
+            ["ranking", "municipio_id_ibge7", "verba_sugerida", "canal_ideal", "mensagem_ideal", "justificativa"],
+        )
         st.dataframe(recommendations[cols].head(50), use_container_width=True, hide_index=True)
 
-    exports = build_product_exports(scores=scores, recommendations=recommendations, simulations=simulations, media=media, messages=messages)
+    exports = build_product_exports(
+        scores=scores, recommendations=recommendations, simulations=simulations, media=media, messages=messages
+    )
     c1, c2, c3 = st.columns(3)
-    c1.download_button("PDF executivo", data=exports["pdf_bytes"], file_name=f"relatorio_executivo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", mime="application/pdf", use_container_width=True)
-    c2.download_button("Planilha operacional", data=exports["xlsx_bytes"], file_name=f"plano_operacional_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    c3.download_button("Ranking atualizado", data=exports["ranking_csv_bytes"], file_name=f"ranking_atualizado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv", use_container_width=True)
+    c1.download_button(
+        "PDF executivo",
+        data=exports["pdf_bytes"],
+        file_name=f"relatorio_executivo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+    )
+    c2.download_button(
+        "Planilha operacional",
+        data=exports["xlsx_bytes"],
+        file_name=f"plano_operacional_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
+    c3.download_button(
+        "Ranking atualizado",
+        data=exports["ranking_csv_bytes"],
+        file_name=f"ranking_atualizado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
 
 
 def _settings_thresholds(settings) -> AlertThresholds:
@@ -489,7 +555,9 @@ def _render_operational_dashboard(paths) -> None:
     settings = get_settings()
     db = MetadataDb(paths.metadata_db_path)
     tenant_id = getattr(paths, "tenant_id", getattr(settings, "tenant_id", "default"))
-    snapshot = build_observability_snapshot(db, tenant_id=tenant_id, thresholds=_settings_thresholds(settings), limit=500)
+    snapshot = build_observability_snapshot(
+        db, tenant_id=tenant_id, thresholds=_settings_thresholds(settings), limit=500
+    )
     summary = snapshot["summary"]
 
     st.markdown("#### Operacao")
@@ -516,16 +584,23 @@ def _render_operational_dashboard(paths) -> None:
     if not events.empty:
         failed_ingestion = events[
             (events["status"] == "failed")
-            & (events["event_type"].astype(str).str.contains("ingest", case=False, na=False)
-               | events["resource"].astype(str).str.contains("ingest", case=False, na=False))
+            & (
+                events["event_type"].astype(str).str.contains("ingest", case=False, na=False)
+                | events["resource"].astype(str).str.contains("ingest", case=False, na=False)
+            )
         ]
         if not failed_ingestion.empty:
             st.markdown("#### Falhas de ingestao")
-            cols = _display_columns(failed_ingestion, ["created_at_utc", "event_type", "resource", "error", "latency_ms", "cost_usd"])
+            cols = _display_columns(
+                failed_ingestion, ["created_at_utc", "event_type", "resource", "error", "latency_ms", "cost_usd"]
+            )
             st.dataframe(failed_ingestion[cols].head(20), use_container_width=True, hide_index=True)
 
         st.markdown("#### Eventos operacionais")
-        cols = _display_columns(events, ["created_at_utc", "event_type", "resource", "status", "latency_ms", "cost_usd", "usage_count", "error"])
+        cols = _display_columns(
+            events,
+            ["created_at_utc", "event_type", "resource", "status", "latency_ms", "cost_usd", "usage_count", "error"],
+        )
         st.dataframe(events[cols].head(50), use_container_width=True, hide_index=True)
     else:
         st.info("Not found in repo: eventos operacionais ainda nao registrados.")
@@ -537,7 +612,10 @@ def _render_operational_dashboard(paths) -> None:
 
     if not alerts.empty:
         st.markdown("#### Alertas enviados/persistidos")
-        cols = _display_columns(alerts, ["created_at_utc", "severity", "metric", "value", "threshold", "status", "channels", "message", "error"])
+        cols = _display_columns(
+            alerts,
+            ["created_at_utc", "severity", "metric", "value", "threshold", "status", "channels", "message", "error"],
+        )
         st.dataframe(alerts[cols].head(25), use_container_width=True, hide_index=True)
 
 
@@ -556,7 +634,9 @@ def render_tab_monitoramento(repo, df_mun, paths=None):
         "mart_social_canal_regiao",
         "dim_tempo",
     ]
-    status = pd.DataFrame([{"dataset": name, "status": "ok" if repo.table_exists(name) else "Not found in repo"} for name in tables])
+    status = pd.DataFrame(
+        [{"dataset": name, "status": "ok" if repo.table_exists(name) else "Not found in repo"} for name in tables]
+    )
     c1, c2, c3 = st.columns(3)
     c1.metric("Datasets produto", int((status["status"] == "ok").sum()))
     c2.metric("Municipios base", len(df_mun))

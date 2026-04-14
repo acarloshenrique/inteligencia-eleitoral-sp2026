@@ -58,13 +58,15 @@ def run_app():
         except AppError as e:
             st.error(e.to_operational_message())
 
-    t1, t2, t3, t4, t5 = st.tabs([
-        "Prioridade territorial",
-        "Midia e performance",
-        "Mensagem",
-        "Simulacao",
-        "Monitoramento",
-    ])
+    t1, t2, t3, t4, t5 = st.tabs(
+        [
+            "Prioridade territorial",
+            "Midia e performance",
+            "Mensagem",
+            "Simulacao",
+            "Monitoramento",
+        ]
+    )
 
     with t1:
         render_tab_prioridade_territorial(repo)

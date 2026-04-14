@@ -37,7 +37,9 @@ def _resolve_latest_bronze_asset(paths, name: str, *, required: bool) -> Path | 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Executa cruzamento de dados abertos para enriquecer o dataset municipal.")
+    parser = argparse.ArgumentParser(
+        description="Executa cruzamento de dados abertos para enriquecer o dataset municipal."
+    )
     parser.add_argument("--base-parquet", default="", help="Parquet base com ranking municipal.")
     parser.add_argument(
         "--source-catalog",

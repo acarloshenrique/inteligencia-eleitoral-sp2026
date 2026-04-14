@@ -20,7 +20,9 @@ def resolve_data_root() -> Path:
     candidates = []
     if env_root:
         candidates.append(Path(env_root))
-    candidates.extend([Path("."), Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")])
+    candidates.extend(
+        [Path("."), Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")]
+    )
     for p in candidates:
         if p.exists():
             return p.resolve()

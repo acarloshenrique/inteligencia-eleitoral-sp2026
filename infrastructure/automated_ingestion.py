@@ -42,6 +42,7 @@ ROLE_DOMAIN_DEFAULTS = {
     "fiscal_csv": "operacoes_de_campanha",
 }
 
+
 @dataclass(frozen=True)
 class IngestionAssetSpec:
     name: str
@@ -67,9 +68,7 @@ def _normalize_domain(value: str) -> str:
 def _validate_domain(value: str) -> str:
     domain = _normalize_domain(value)
     if domain not in ALLOWED_SOURCE_DOMAINS:
-        raise AutomatedIngestionError(
-            f"dominio de fonte invalido: {value}. Use um de {sorted(ALLOWED_SOURCE_DOMAINS)}"
-        )
+        raise AutomatedIngestionError(f"dominio de fonte invalido: {value}. Use um de {sorted(ALLOWED_SOURCE_DOMAINS)}")
     return domain
 
 
@@ -130,7 +129,9 @@ def _validate_downloaded_asset(asset: IngestionAssetSpec, path: Path) -> tuple[p
         "null_pct": round(
             float(df.isna().sum().sum() / max(1, df.shape[0] * max(1, df.shape[1]))) * 100.0,
             3,
-        ) if not df.empty else 0.0,
+        )
+        if not df.empty
+        else 0.0,
     }
     return df, quality
 

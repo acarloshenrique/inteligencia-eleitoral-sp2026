@@ -14,7 +14,9 @@ def _parse_asset(raw: str) -> OpenDataAsset:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Sincroniza assets de dados abertos com cache incremental (ETag/Last-Modified).")
+    parser = argparse.ArgumentParser(
+        description="Sincroniza assets de dados abertos com cache incremental (ETag/Last-Modified)."
+    )
     parser.add_argument(
         "--asset",
         action="append",

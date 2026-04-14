@@ -22,7 +22,9 @@ class OperationObserver:
         self._tenant_id = tenant_id
 
     @contextmanager
-    def track(self, *, event_type: str, resource: str, metadata: dict[str, Any] | None = None) -> Iterator[dict[str, Any]]:
+    def track(
+        self, *, event_type: str, resource: str, metadata: dict[str, Any] | None = None
+    ) -> Iterator[dict[str, Any]]:
         started = time.perf_counter()
         ctx: dict[str, Any] = {"cost_usd": 0.0, "usage_count": 1, "metadata": metadata or {}}
         try:

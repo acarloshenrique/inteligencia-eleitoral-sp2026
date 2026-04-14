@@ -74,17 +74,20 @@ def _extract_vulnerabilities(payload: dict[str, Any]) -> list[dict[str, Any]]:
     for vuln in payload.get("vulnerabilities") or []:
         if not isinstance(vuln, dict):
             continue
-        severity = _max_severity(
-            [
-                sev
-                for sev in (
-                    _normalize_severity(vuln.get("severity")),
-                    _normalize_severity(vuln.get("ratings")),
-                    _normalize_severity(vuln.get("scores")),
-                )
-                if sev
-            ]
-        ) or "unknown"
+        severity = (
+            _max_severity(
+                [
+                    sev
+                    for sev in (
+                        _normalize_severity(vuln.get("severity")),
+                        _normalize_severity(vuln.get("ratings")),
+                        _normalize_severity(vuln.get("scores")),
+                    )
+                    if sev
+                ]
+            )
+            or "unknown"
+        )
         affects = vuln.get("affects") or [{}]
         for affected in affects:
             ref = affected.get("ref") if isinstance(affected, dict) else affected
@@ -114,9 +117,14 @@ def _extract_vulnerabilities(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 vuln.get("cvss"),
                 vuln.get("score"),
                 vuln.get("cvss_score"),
-                (vuln.get("database_specific") or {}).get("severity") if isinstance(vuln.get("database_specific"), dict) else None,
+                (vuln.get("database_specific") or {}).get("severity")
+                if isinstance(vuln.get("database_specific"), dict)
+                else None,
             ]
-            severity = _max_severity([sev for sev in (_normalize_severity(item) for item in severity_candidates) if sev]) or "unknown"
+            severity = (
+                _max_severity([sev for sev in (_normalize_severity(item) for item in severity_candidates) if sev])
+                or "unknown"
+            )
             findings.append(
                 {
                     "package": package,

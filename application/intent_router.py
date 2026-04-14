@@ -31,7 +31,10 @@ class IntentQuery:
 
 
 _INTENT_KEYWORDS: tuple[tuple[ChatIntent, tuple[str, ...]], ...] = (
-    (ChatIntent.PRODUCT_RECOMMENDATION, ("recomendacao", "canal ideal", "mensagem ideal", "verba sugerida", "roi politico")),
+    (
+        ChatIntent.PRODUCT_RECOMMENDATION,
+        ("recomendacao", "canal ideal", "mensagem ideal", "verba sugerida", "roi politico"),
+    ),
     (ChatIntent.ALLOCATION, ("budget", "alocar", "alocacao", "investir", "verba")),
     (ChatIntent.SECTIONS, ("secao", "secoes", "campo", "zona eleitoral")),
     (ChatIntent.FIELD_MAP, ("mapa", "custo", "mobilizacao")),

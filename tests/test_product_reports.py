@@ -47,8 +47,20 @@ def _scores():
 def _recommendations():
     return pd.DataFrame(
         [
-            {"ranking": 1, "municipio_id_ibge7": "3550308", "verba_sugerida": 30000, "canal_ideal": "meta_ads", "mensagem_ideal": "Emprego e renda"},
-            {"ranking": 2, "municipio_id_ibge7": "3509502", "verba_sugerida": 20000, "canal_ideal": "google_ads", "mensagem_ideal": "Saude perto"},
+            {
+                "ranking": 1,
+                "municipio_id_ibge7": "3550308",
+                "verba_sugerida": 30000,
+                "canal_ideal": "meta_ads",
+                "mensagem_ideal": "Emprego e renda",
+            },
+            {
+                "ranking": 2,
+                "municipio_id_ibge7": "3509502",
+                "verba_sugerida": 20000,
+                "canal_ideal": "google_ads",
+                "mensagem_ideal": "Saude perto",
+            },
         ]
     )
 

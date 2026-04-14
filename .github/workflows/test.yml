@@ -21,8 +21,11 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt ruff "mypy==1.11.2" bandit pip-audit
+      - run: pip install -r requirements.txt ruff "mypy==1.11.2" bandit pip-audit pre-commit
+      - run: pre-commit validate-config
+      - run: ruff format --check .
       - run: ruff check .
+      - run: python scripts/check_no_compressed_artifacts.py
       - run: mypy --no-incremental application domain infrastructure presentation scripts
       - run: bandit -q -c pyproject.toml -r application domain infrastructure presentation scripts api workers --severity-level high --confidence-level medium
       - name: Dependency Audit (block high/critical)

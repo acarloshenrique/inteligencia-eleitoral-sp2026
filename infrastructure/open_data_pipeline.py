@@ -36,13 +36,7 @@ def _ts_now_compact() -> str:
 
 
 def _normalize_text(value: str) -> str:
-    ascii_text = (
-        unicodedata.normalize("NFKD", str(value))
-        .encode("ascii", "ignore")
-        .decode("ascii")
-        .strip()
-        .lower()
-    )
+    ascii_text = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii").strip().lower()
     return " ".join(ascii_text.split())
 
 
@@ -96,7 +90,11 @@ def _build_dim_municipio(mapping_csv_path: Path) -> tuple[pd.DataFrame, pd.DataF
     dim = validate_municipio_dimension(dim)
 
     alias_map = {
-        str(row["municipio_id_ibge7"]): [_normalize_text(alias) for alias in (row["aliases"] if isinstance(row["aliases"], list) else []) if str(alias).strip()]
+        str(row["municipio_id_ibge7"]): [
+            _normalize_text(alias)
+            for alias in (row["aliases"] if isinstance(row["aliases"], list) else [])
+            if str(alias).strip()
+        ]
         for _, row in dim.iterrows()
     }
     dim_alias = build_alias_dimension(dim_municipio=dim, alias_map=alias_map)
@@ -124,16 +122,12 @@ def _load_socio(socio_csv_path: Path | None) -> pd.DataFrame:
 
 def _resolve_temporal_fields(base: pd.DataFrame, inputs: OpenDataInputs) -> tuple[pd.Series, pd.Series, pd.Series]:
     ano_series = (
-        base["ano"]
-        if "ano" in base.columns
-        else pd.Series([inputs.ano] * len(base), index=base.index, dtype="Int64")
+        base["ano"] if "ano" in base.columns else pd.Series([inputs.ano] * len(base), index=base.index, dtype="Int64")
     )
     if "ano" not in base.columns:
         ano_series = pd.to_numeric(ano_series, errors="coerce").astype("Int64")
     mes_series = (
-        base["mes"]
-        if "mes" in base.columns
-        else pd.Series([inputs.mes] * len(base), index=base.index, dtype="Int64")
+        base["mes"] if "mes" in base.columns else pd.Series([inputs.mes] * len(base), index=base.index, dtype="Int64")
     )
     if "mes" not in base.columns:
         mes_series = pd.to_numeric(mes_series, errors="coerce").astype("Int64")
@@ -159,7 +153,13 @@ def _build_canonical_key(row: pd.Series) -> str | None:
     return f"{municipio_id}:{int(ano)}:{mes_value}:{turno_value}"
 
 
-def _enrich_base(base_df: pd.DataFrame, dim_municipio: pd.DataFrame, dim_alias: pd.DataFrame, socio_df: pd.DataFrame, inputs: OpenDataInputs) -> pd.DataFrame:
+def _enrich_base(
+    base_df: pd.DataFrame,
+    dim_municipio: pd.DataFrame,
+    dim_alias: pd.DataFrame,
+    socio_df: pd.DataFrame,
+    inputs: OpenDataInputs,
+) -> pd.DataFrame:
     if "municipio" not in base_df.columns:
         raise OpenDataPipelineError("dataset base sem coluna 'municipio'")
     if "ranking_final" not in base_df.columns:

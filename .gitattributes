@@ -1,0 +1,22 @@
+﻿* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.parquet binary
+*.sqlite binary
+*.sqlite3 binary
+*.db binary
+*.duckdb binary
+*.zip binary
+*.gz binary
+*.xz binary
+*.bz2 binary
+*.7z binary
+*.rar binary

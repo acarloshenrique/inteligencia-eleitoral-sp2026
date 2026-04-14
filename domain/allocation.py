@@ -69,9 +69,19 @@ def calcular_alocacao(df_mun, budget, cargo, n, split_d, pesos_cluster, tetos, c
     low = offline["low_pd"]
     high_threshold = offline["high_pd_threshold"]
     mid_threshold = offline["mid_pd_threshold"]
-    evento_presencial = np.select([pq > high_threshold, pq >= mid_threshold], [high["evento_presencial"], mid["evento_presencial"]], default=low["evento_presencial"])
-    radio_local = np.select([pq > high_threshold, pq >= mid_threshold], [high["radio_local"], mid["radio_local"]], default=low["radio_local"])
-    impresso = np.select([pq > high_threshold, pq >= mid_threshold], [high["impresso"], mid["impresso"]], default=low["impresso"])
+    evento_presencial = np.select(
+        [pq > high_threshold, pq >= mid_threshold],
+        [high["evento_presencial"], mid["evento_presencial"]],
+        default=low["evento_presencial"],
+    )
+    radio_local = np.select(
+        [pq > high_threshold, pq >= mid_threshold],
+        [high["radio_local"], mid["radio_local"]],
+        default=low["radio_local"],
+    )
+    impresso = np.select(
+        [pq > high_threshold, pq >= mid_threshold], [high["impresso"], mid["impresso"]], default=low["impresso"]
+    )
 
     return pd.DataFrame(
         {

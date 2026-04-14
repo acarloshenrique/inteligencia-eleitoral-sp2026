@@ -112,7 +112,6 @@ class Settings(BaseSettings):
             raise ValueError("APP_ENV invalido. Use: dev, staging ou prod.")
         return aliases[env]
 
-
     @field_validator("tenant_id", mode="before")
     @classmethod
     def validate_tenant_id(cls, value):
@@ -147,7 +146,12 @@ class Settings(BaseSettings):
     def resolved_data_root(self):
         if self.data_root:
             return Path(self.data_root).resolve()
-        candidatos = [Path("."), Path("./data"), Path("/app/data"), Path("/content/drive/MyDrive/inteligencia_eleitoral")]
+        candidatos = [
+            Path("."),
+            Path("./data"),
+            Path("/app/data"),
+            Path("/content/drive/MyDrive/inteligencia_eleitoral"),
+        ]
         for p in candidatos:
             if p.exists():
                 return p.resolve()
@@ -191,7 +195,10 @@ class Settings(BaseSettings):
             gold_serving_root=gold_root / "serving",
             catalog_root=catalog_root,
             chromadb_path=effective_root / "chromadb",
-            runtime_reports_root=Path(tempfile.gettempdir()) / "inteligencia_eleitoral" / tenant.tenant_id / "gold_reports",
+            runtime_reports_root=Path(tempfile.gettempdir())
+            / "inteligencia_eleitoral"
+            / tenant.tenant_id
+            / "gold_reports",
             ts=self.df_mun_ts,
             metadata_db_path=(
                 Path(self.metadata_db_path).resolve()

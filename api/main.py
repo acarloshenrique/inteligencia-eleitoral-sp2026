@@ -243,7 +243,9 @@ def evaluate_ops_alerts(
         latency_p95_ms=float(getattr(settings, "ops_alert_latency_p95_ms", 30000.0)),
         daily_cost_usd=float(getattr(settings, "ops_alert_daily_cost_usd", 50.0)),
     )
-    alerts = evaluate_and_dispatch_alerts(db, tenant_id=tenant_id, thresholds=thresholds, settings=settings, limit=limit)
+    alerts = evaluate_and_dispatch_alerts(
+        db, tenant_id=tenant_id, thresholds=thresholds, settings=settings, limit=limit
+    )
     return {"tenant_id": tenant_id, "alerts": alerts}
 
 
@@ -257,7 +259,9 @@ def create_ops_schedule(
     paths = settings.build_paths()
     schedules = build_default_schedule(
         tenant_id=paths.tenant_id,
-        daily_hour=req.daily_ingestion_hour if req.daily_ingestion_hour is not None else settings.ops_daily_ingestion_hour,
+        daily_hour=req.daily_ingestion_hour
+        if req.daily_ingestion_hour is not None
+        else settings.ops_daily_ingestion_hour,
         weekly_day=req.weekly_update_day if req.weekly_update_day is not None else settings.ops_weekly_update_day,
         weekly_hour=req.weekly_update_hour if req.weekly_update_hour is not None else settings.ops_weekly_update_hour,
     )
@@ -271,4 +275,8 @@ def create_ops_schedule(
         metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
         tenant_id=paths.tenant_id,
     )
-    return {"tenant_id": paths.tenant_id, "manifest_path": str(manifest), "pipelines": [item.name for item in schedules]}
+    return {
+        "tenant_id": paths.tenant_id,
+        "manifest_path": str(manifest),
+        "pipelines": [item.name for item in schedules],
+    }

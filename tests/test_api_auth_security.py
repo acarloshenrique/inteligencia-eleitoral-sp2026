@@ -61,14 +61,18 @@ def test_non_dev_tokens_require_expiry(monkeypatch):
 
 def test_expired_token_fails_configuration(monkeypatch):
     expires = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
-    _patch_auth(monkeypatch, app_env="prod", mapping={"token": {"actor": "ops", "role": "admin", "expires_at": expires}})
+    _patch_auth(
+        monkeypatch, app_env="prod", mapping={"token": {"actor": "ops", "role": "admin", "expires_at": expires}}
+    )
     with pytest.raises(security.AuthConfigurationError):
         security.validate_auth_configuration()
 
 
 def test_valid_secret_backed_token_authenticates(monkeypatch):
     expires = (datetime.now(UTC) + timedelta(days=1)).isoformat()
-    _patch_auth(monkeypatch, app_env="prod", mapping={"token": {"actor": "ops", "role": "operator", "expires_at": expires}})
+    _patch_auth(
+        monkeypatch, app_env="prod", mapping={"token": {"actor": "ops", "role": "operator", "expires_at": expires}}
+    )
     ctx = security.get_auth_context("Bearer token")
     assert ctx.actor == "ops"
     assert ctx.role == "operator"

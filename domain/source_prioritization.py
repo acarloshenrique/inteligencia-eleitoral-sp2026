@@ -27,4 +27,3 @@ class SourceEvaluation:
     accepted: bool
     score: float
     reasons: tuple[str, ...]
-

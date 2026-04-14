@@ -77,7 +77,9 @@ def _send_email(alert: dict[str, Any], settings: Any, timeout_seconds: float) ->
         return NotificationResult(channel="email", ok=False, detail=type(exc).__name__)
 
 
-def send_alert_notifications(alert: dict[str, Any], settings: Any, *, timeout_seconds: float = 10.0) -> list[NotificationResult]:
+def send_alert_notifications(
+    alert: dict[str, Any], settings: Any, *, timeout_seconds: float = 10.0
+) -> list[NotificationResult]:
     results: list[NotificationResult] = []
     payload = _alert_payload(alert)
     text = _alert_title(alert)
