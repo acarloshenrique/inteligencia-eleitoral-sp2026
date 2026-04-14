@@ -29,9 +29,9 @@ def _sha256_file(path: Path) -> str:
 
 
 def _default_embedder_factory():
-    from sentence_transformers import SentenceTransformer
+    from infrastructure.embeddings import build_default_embedder
 
-    return SentenceTransformer("all-MiniLM-L6-v2")
+    return build_default_embedder()
 
 
 def _default_chroma_client_factory(chromadb_path: Path):

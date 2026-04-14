@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     chroma_vector_backend: str = Field(default="local", alias="CHROMA_VECTOR_BACKEND")
     chroma_allow_shared_volume: bool = Field(default=False, alias="CHROMA_ALLOW_SHARED_VOLUME")
     lgpd_anonymization_salt: str = Field(default="", alias="LGPD_ANONYMIZATION_SALT")
+    embedding_model_id: str = Field(default="Xenova/all-MiniLM-L6-v2", alias="EMBEDDING_MODEL_ID")
+    embedding_onnx_model_file: str = Field(default="onnx/model.onnx", alias="EMBEDDING_ONNX_MODEL_FILE")
+    embedding_cache_dir: str = Field(default="", alias="EMBEDDING_CACHE_DIR")
+    embedding_max_length: int = Field(default=256, alias="EMBEDDING_MAX_LENGTH")
 
     @field_validator("app_env", mode="before")
     @classmethod

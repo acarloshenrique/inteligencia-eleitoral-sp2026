@@ -27,7 +27,7 @@ Sistema de alocação inteligente de recursos de campanha para os 644 município
 |---|---|
 | Interface | Streamlit |
 | LLM | Groq — Llama 3.3 70B |
-| Embeddings | sentence-transformers/all-MiniLM-L6-v2 |
+| Embeddings | onnxruntime + Xenova/all-MiniLM-L6-v2 ONNX |
 | Busca semântica | ChromaDB |
 | Banco de dados | DuckDB |
 | Deploy | Docker + HF Spaces |

@@ -36,9 +36,9 @@ class MockLLMClient:
 
 @st.cache_resource(show_spinner="Carregando embedder...")
 def carrega_embedder():
-    from sentence_transformers import SentenceTransformer
+    from infrastructure.embeddings import build_default_embedder
 
-    return SentenceTransformer("all-MiniLM-L6-v2")
+    return build_default_embedder()
 
 
 @st.cache_resource(show_spinner="Conectando ChromaDB...")
