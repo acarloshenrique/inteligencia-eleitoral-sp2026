@@ -6,6 +6,14 @@ from typing import Any
 import pandas as pd
 
 from config.settings import get_settings
+from domain.job_contracts import (
+    ExportJobPayload,
+    ExportJobResult,
+    IngestionJobPayload,
+    IngestionJobResult,
+    ReindexJobPayload,
+    ReindexJobResult,
+)
 from domain.lgpd import anonymize_columns, minimize_dataframe
 from infrastructure.artifact_store import LocalArtifactStore, S3ArtifactStore
 from infrastructure.automated_ingestion import run_automated_ingestion
@@ -54,23 +62,26 @@ def run_reindex_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db = _metadata_db()
     settings = get_settings()
     paths = settings.build_paths()
-    tenant_id = str(payload.get("tenant_id") or paths.tenant_id)
+    job_payload = ReindexJobPayload.model_validate(payload)
+    payload = job_payload.model_dump()
+    tenant_id = job_payload.tenant_id or paths.tenant_id
     observer = OperationObserver(db, tenant_id=tenant_id)
     db.set_status(job_id, "running")
     try:
         with observer.track(event_type="job.reindex", resource=job_id, metadata={"payload": payload}) as span:
-            source_path = Path(payload["input_path"])
+            source_path = Path(job_payload.input_path)
             if not source_path.exists() or not is_within_gold_layer(paths, source_path):
                 raise ValueError("input_path precisa existir na camada gold")
             result = run_vector_reindex_job(
                 chromadb_path=paths.chromadb_path,
                 input_parquet=source_path,
-                collection_name=payload.get("collection_name", "municipios_v2"),
-                force=bool(payload.get("force", False)),
+                collection_name=job_payload.collection_name,
+                force=job_payload.force,
             )
             span["usage_count"] = int(result.get("rows_indexed", 1) or 1) if isinstance(result, dict) else 1
-        db.set_result(job_id, result)
-        return result
+        result_payload = ReindexJobResult.model_validate(result).model_dump(mode="json")
+        db.set_result(job_id, result_payload)
+        return result_payload
     except Exception as e:
         db.set_error(job_id, str(e))
         _evaluate_job_alerts(db, settings, tenant_id)
@@ -81,22 +92,24 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db = _metadata_db()
     settings = get_settings()
     paths = settings.build_paths()
-    tenant_id = str(payload.get("tenant_id") or paths.tenant_id)
+    job_payload = ExportJobPayload.model_validate(payload)
+    payload = job_payload.model_dump()
+    tenant_id = job_payload.tenant_id or paths.tenant_id
     observer = OperationObserver(db, tenant_id=tenant_id)
     store = _artifact_store()
     db.set_status(job_id, "running")
     try:
         with observer.track(event_type="job.export", resource=job_id, metadata={"payload": payload}) as span:
-            source_path = Path(payload["input_path"])
+            source_path = Path(job_payload.input_path)
             if not source_path.exists() or not is_within_gold_layer(paths, source_path):
                 raise ValueError("input_path precisa existir na camada gold")
             work_source = source_path
-            if bool(payload.get("minimize", True)) or bool(payload.get("anonymize", False)):
+            if job_payload.minimize or job_payload.anonymize:
                 df = pd.read_parquet(source_path)
                 span["usage_count"] = len(df)
-                if bool(payload.get("minimize", True)):
+                if job_payload.minimize:
                     df = minimize_dataframe(df)
-                if bool(payload.get("anonymize", False)):
+                if job_payload.anonymize:
                     salt = (
                         build_secret_provider(settings).get_secret("LGPD_ANONYMIZATION_SALT")
                         or settings.lgpd_anonymization_salt
@@ -124,8 +137,9 @@ def run_export_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 "artifact_uri": artifact_uri,
                 "manifest_path": pipeline_result["manifest_path"],
             }
-        db.set_result(job_id, result)
-        return result
+        result_payload = ExportJobResult.model_validate(result).model_dump(mode="json")
+        db.set_result(job_id, result_payload)
+        return result_payload
     except Exception as e:
         db.set_error(job_id, str(e))
         _evaluate_job_alerts(db, settings, tenant_id)
@@ -136,26 +150,27 @@ def run_ingestion_task(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     db = _metadata_db()
     settings = get_settings()
     paths = settings.build_paths()
-    tenant_id = str(payload.get("tenant_id") or paths.tenant_id)
+    job_payload = IngestionJobPayload.model_validate(payload)
+    payload = job_payload.model_dump()
+    tenant_id = job_payload.tenant_id or paths.tenant_id
     observer = OperationObserver(db, tenant_id=tenant_id)
     db.set_status(job_id, "running")
     try:
         with observer.track(event_type="job.ingest", resource=job_id, metadata={"payload": payload}) as span:
-            catalog_raw = str(
-                payload.get("source_catalog_path") or settings.ingestion_source_catalog_path or ""
-            ).strip()
+            catalog_raw = str(job_payload.source_catalog_path or settings.ingestion_source_catalog_path or "").strip()
             if not catalog_raw:
                 raise ValueError("source_catalog_path nao informado")
             result = run_automated_ingestion(
                 paths=paths,
                 catalog_path=Path(catalog_raw).resolve(),
-                pipeline=str(payload.get("pipeline", "")).strip() or None,
-                pipeline_version=str(payload.get("pipeline_version", "")).strip() or None,
+                pipeline=str(job_payload.pipeline or "").strip() or None,
+                pipeline_version=str(job_payload.pipeline_version or "").strip() or None,
             )
             if isinstance(result, dict):
                 span["usage_count"] = int(result.get("sources_total", 1) or 1)
-        db.set_result(job_id, result)
-        return result
+        result_payload = IngestionJobResult.model_validate(result).model_dump(mode="json")
+        db.set_result(job_id, result_payload)
+        return result_payload
     except Exception as e:
         db.set_error(job_id, str(e))
         _evaluate_job_alerts(db, settings, tenant_id)

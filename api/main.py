@@ -6,8 +6,23 @@ from pathlib import Path
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
 
+from api.contracts import (
+    AlertEvaluationResponse,
+    AuditListResponse,
+    ExportJobPayload,
+    ExportRequest,
+    HealthResponse,
+    IngestionJobPayload,
+    IngestionRequest,
+    JobQueuedResponse,
+    JobRecordResponse,
+    ObservabilityResponse,
+    OpsScheduleRequest,
+    OpsScheduleResponse,
+    ReindexJobPayload,
+    ReindexRequest,
+)
 from api.security import AuthContext, audit_metadata_from_request, require_roles, validate_auth_configuration
 from config.settings import get_settings
 from infrastructure.env import is_within_gold_layer
@@ -15,30 +30,6 @@ from infrastructure.metadata_db import MetadataDb
 from infrastructure.observability import AlertThresholds, build_observability_snapshot, evaluate_and_dispatch_alerts
 from infrastructure.operation_scheduler import build_default_schedule, write_schedule_manifest
 from infrastructure.queue_rq import get_queue
-
-
-class ReindexRequest(BaseModel):
-    input_path: str
-    collection_name: str = Field(default="municipios_v2")
-    force: bool = False
-
-
-class ExportRequest(BaseModel):
-    input_path: str
-    minimize: bool = True
-    anonymize: bool = False
-
-
-class IngestionRequest(BaseModel):
-    source_catalog_path: str | None = None
-    pipeline: str | None = None
-    pipeline_version: str | None = None
-
-
-class OpsScheduleRequest(BaseModel):
-    daily_ingestion_hour: int | None = None
-    weekly_update_day: str | None = None
-    weekly_update_hour: int | None = None
 
 
 def _metadata_db() -> MetadataDb:
@@ -70,94 +61,94 @@ async def lifespan(app_: FastAPI):
 app = FastAPI(title="Inteligencia Eleitoral API", version="1.0.0", lifespan=lifespan)
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 def health():
     return {"status": "ok", "ts_utc": datetime.now(UTC).isoformat()}
 
 
-@app.post("/v1/jobs/reindex")
+@app.post("/v1/jobs/reindex", response_model=JobQueuedResponse)
 def enqueue_reindex(
     req: ReindexRequest,
     request: Request,
     auth: AuthContext = Depends(require_roles("admin", "operator")),
 ):
     settings = get_settings()
-    payload = req.model_dump()
-    payload["tenant_id"] = _tenant_id()
-    _validate_gold_input_path(payload["input_path"])
+    payload_model = ReindexJobPayload(**req.model_dump(), tenant_id=_tenant_id())
+    payload = payload_model.model_dump()
+    _validate_gold_input_path(payload_model.input_path)
 
     job_id = str(uuid.uuid4())
     db = _metadata_db()
-    db.create_job(job_id, "reindex", payload, tenant_id=payload["tenant_id"])
+    db.create_job(job_id, "reindex", payload, tenant_id=payload_model.tenant_id)
     db.log_audit(
         actor=auth.actor,
         role=auth.role,
         action="enqueue_reindex",
         resource=job_id,
         metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
-        tenant_id=_tenant_id(),
+        tenant_id=payload_model.tenant_id,
     )
     queue = get_queue(settings.redis_url, settings.rq_queue_name)
     queue.enqueue("workers.tasks.run_reindex_task", job_id, payload, job_id=job_id)
-    return {"job_id": job_id, "status": "queued"}
+    return JobQueuedResponse(job_id=job_id, job_type="reindex", tenant_id=payload_model.tenant_id)
 
 
-@app.post("/v1/jobs/export")
+@app.post("/v1/jobs/export", response_model=JobQueuedResponse)
 def enqueue_export(
     req: ExportRequest,
     request: Request,
     auth: AuthContext = Depends(require_roles("admin", "operator")),
 ):
     settings = get_settings()
-    payload = req.model_dump()
-    payload["tenant_id"] = _tenant_id()
-    _validate_gold_input_path(payload["input_path"])
+    payload_model = ExportJobPayload(**req.model_dump(), tenant_id=_tenant_id())
+    payload = payload_model.model_dump()
+    _validate_gold_input_path(payload_model.input_path)
 
     job_id = str(uuid.uuid4())
     db = _metadata_db()
-    db.create_job(job_id, "export", payload, tenant_id=payload["tenant_id"])
+    db.create_job(job_id, "export", payload, tenant_id=payload_model.tenant_id)
     db.log_audit(
         actor=auth.actor,
         role=auth.role,
         action="enqueue_export",
         resource=job_id,
         metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
-        tenant_id=_tenant_id(),
+        tenant_id=payload_model.tenant_id,
     )
     queue = get_queue(settings.redis_url, settings.rq_queue_name)
     queue.enqueue("workers.tasks.run_export_task", job_id, payload, job_id=job_id)
-    return {"job_id": job_id, "status": "queued"}
+    return JobQueuedResponse(job_id=job_id, job_type="export", tenant_id=payload_model.tenant_id)
 
 
-@app.post("/v1/jobs/ingest")
+@app.post("/v1/jobs/ingest", response_model=JobQueuedResponse)
 def enqueue_ingest(
     req: IngestionRequest,
     request: Request,
     auth: AuthContext = Depends(require_roles("admin", "operator")),
 ):
     settings = get_settings()
-    payload = req.model_dump()
-    payload["tenant_id"] = _tenant_id()
-    if not payload.get("source_catalog_path") and not settings.ingestion_source_catalog_path:
+    payload_model = IngestionJobPayload(**req.model_dump(), tenant_id=_tenant_id())
+    payload = payload_model.model_dump()
+    if not payload_model.source_catalog_path and not settings.ingestion_source_catalog_path:
         raise HTTPException(status_code=400, detail="source_catalog_path nao informado")
 
     job_id = str(uuid.uuid4())
     db = _metadata_db()
-    db.create_job(job_id, "ingest", payload, tenant_id=payload["tenant_id"])
+    db.create_job(job_id, "ingest", payload, tenant_id=payload_model.tenant_id)
     db.log_audit(
         actor=auth.actor,
         role=auth.role,
         action="enqueue_ingest",
         resource=job_id,
         metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
-        tenant_id=_tenant_id(),
+        tenant_id=payload_model.tenant_id,
     )
     queue = get_queue(settings.redis_url, settings.rq_queue_name)
     queue.enqueue("workers.tasks.run_ingestion_task", job_id, payload, job_id=job_id)
-    return {"job_id": job_id, "status": "queued"}
+    return JobQueuedResponse(job_id=job_id, job_type="ingest", tenant_id=payload_model.tenant_id)
 
 
-@app.get("/v1/jobs/{job_id}")
+@app.get("/v1/jobs/{job_id}", response_model=JobRecordResponse)
 def get_job(
     job_id: str,
     request: Request,
@@ -178,7 +169,7 @@ def get_job(
     return data
 
 
-@app.get("/v1/audit")
+@app.get("/v1/audit", response_model=AuditListResponse)
 def list_audit(
     request: Request,
     limit: int = 100,
@@ -196,7 +187,7 @@ def list_audit(
     return {"items": db.list_audit(limit=limit)}
 
 
-@app.get("/v1/ops/observability")
+@app.get("/v1/ops/observability", response_model=ObservabilityResponse)
 def get_observability(
     request: Request,
     limit: int = 500,
@@ -221,7 +212,7 @@ def get_observability(
     return build_observability_snapshot(db, tenant_id=tenant_id, thresholds=thresholds, limit=limit)
 
 
-@app.post("/v1/ops/alerts/evaluate")
+@app.post("/v1/ops/alerts/evaluate", response_model=AlertEvaluationResponse)
 def evaluate_ops_alerts(
     request: Request,
     limit: int = 500,
@@ -249,7 +240,7 @@ def evaluate_ops_alerts(
     return {"tenant_id": tenant_id, "alerts": alerts}
 
 
-@app.post("/v1/ops/schedule")
+@app.post("/v1/ops/schedule", response_model=OpsScheduleResponse)
 def create_ops_schedule(
     req: OpsScheduleRequest,
     request: Request,
