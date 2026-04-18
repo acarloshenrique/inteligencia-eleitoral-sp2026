@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from config.settings import Settings
-from infrastructure.secrets import ChainedSecretProvider, EnvSecretProvider, VaultSecretProvider
+from infrastructure.secrets import ChainedSecretProvider, EnvSecretProvider, SecretProvider, VaultSecretProvider
 
 
 def build_secret_provider(settings: Settings) -> ChainedSecretProvider:
-    providers = []
+    providers: list[SecretProvider] = []
     if settings.secret_backend.lower() == "vault":
         providers.append(
             VaultSecretProvider(

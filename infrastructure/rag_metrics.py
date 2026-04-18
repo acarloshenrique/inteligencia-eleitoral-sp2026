@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
+from datetime import UTC, datetime
 from statistics import mean
 from typing import Any
 
 from config.settings import AppPaths
+from infrastructure.privacy import redact_text
 
 
 def _p95(values: list[float]) -> float:
@@ -93,11 +94,13 @@ class RagMetricsTracker:
         cached_vector: bool,
         cached_llm: bool,
     ) -> dict[str, Any]:
+        safe_question = redact_text(question)
         event = {
             "ts_utc": datetime.now(UTC).isoformat(),
-            "question": question,
+            "question": safe_question,
+            "question_redacted": safe_question != str(question or ""),
             "retrieved_count": len(retrieved_municipios),
-            "recall_at_k": _recall_at_k(question, retrieved_municipios),
+            "recall_at_k": _recall_at_k(safe_question, retrieved_municipios),
             "latency_total_ms": float(latency_total_ms),
             "latency_vector_ms": float(latency_vector_ms),
             "latency_llm_ms": float(latency_llm_ms),

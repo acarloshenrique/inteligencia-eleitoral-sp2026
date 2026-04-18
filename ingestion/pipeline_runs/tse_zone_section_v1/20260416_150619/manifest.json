@@ -1,0 +1,106 @@
+{
+  "pipeline_version": "tse_zone_section_v1",
+  "run_id": "20260416_150619",
+  "created_at_utc": "2026-04-16T15:09:46.284358+00:00",
+  "inputs": {
+    "eleitorado_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\ingestion\\downloads\\eleitoral_oficial\\tse_2024_sp\\eleitorado_local_votacao_2024.zip",
+    "resultados_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\ingestion\\downloads\\eleitoral_oficial\\tse_2024_sp\\votacao_secao_2024_SP.zip",
+    "uf": "SP",
+    "ano_eleicao": 2024,
+    "turno": 1
+  },
+  "outputs": {
+    "fact_secao_eleitoral_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\silver\\fact_secao_eleitoral_20260416_150619.parquet",
+    "dim_territorio_eleitoral_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\silver\\dim_territorio_eleitoral_20260416_150619.parquet",
+    "fact_zona_eleitoral_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\gold\\fact_zona_eleitoral_20260416_150619.parquet",
+    "features_zona_eleitoral_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\gold\\features_zona_eleitoral_20260416_150619.parquet"
+  },
+  "quality": {
+    "status": "ok",
+    "rows_zona": 779,
+    "rows_secao": 103074,
+    "coverage_zonas": 779,
+    "mean_data_quality_score": 0.94,
+    "mean_join_confidence": 0.96
+  },
+  "dataset_manifest": {
+    "fonte": "tse_zone_section",
+    "data_coleta_utc": "2026-04-16T15:09:46.284358+00:00",
+    "hash_arquivo": "960701f290e016ee25e107bb4cc1087168167a85d026291aa1f904e503083a32",
+    "schema_detectado": {
+      "uf": "object",
+      "ano_eleicao": "int64",
+      "turno": "int64",
+      "municipio": "object",
+      "cod_tse_municipio": "object",
+      "zona_eleitoral": "int64",
+      "eleitores_aptos": "int64",
+      "secoes_total": "int64",
+      "latitude": "float64",
+      "longitude": "float64",
+      "municipio_id_ibge7": "object",
+      "territorio_id": "object",
+      "zona_id": "object",
+      "fonte": "object",
+      "data_referencia": "object",
+      "match_method": "object",
+      "data_quality_score": "float64",
+      "join_confidence": "float64",
+      "abstencao_pct": "float64",
+      "competitividade": "float64",
+      "volatilidade_historica": "float64",
+      "votos_validos": "int32",
+      "comparecimento": "float64",
+      "abstencoes": "int32"
+    },
+    "cobertura_territorial": {
+      "granularidade": "municipio",
+      "rows": 779,
+      "ufs": [
+        "SP"
+      ],
+      "municipios_cobertos": 0
+    },
+    "periodo_referencia": {
+      "colunas": [
+        "turno",
+        "data_referencia"
+      ],
+      "turno": [
+        "1"
+      ],
+      "data_referencia": [
+        "2024"
+      ]
+    },
+    "qualidade_carga": {
+      "status": "ok",
+      "rows_zona": 779,
+      "rows_secao": 103074,
+      "coverage_zonas": 779,
+      "mean_data_quality_score": 0.94,
+      "mean_join_confidence": 0.96
+    },
+    "versao_parser": "tse_zone_section_v1",
+    "arquivo": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\gold\\fact_zona_eleitoral_20260416_150619.parquet"
+  },
+  "catalog_refs": [
+    {
+      "catalog_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_catalog.jsonl",
+      "latest_index_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_latest.json"
+    },
+    {
+      "catalog_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_catalog.jsonl",
+      "latest_index_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_latest.json"
+    },
+    {
+      "catalog_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_catalog.jsonl",
+      "latest_index_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_latest.json"
+    },
+    {
+      "catalog_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_catalog.jsonl",
+      "latest_index_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\data_lake\\catalog\\datasets_latest.json"
+    }
+  ],
+  "lgpd_classification": "public_open_data_aggregated"
+}

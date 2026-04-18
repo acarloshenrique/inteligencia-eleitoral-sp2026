@@ -1,7 +1,7 @@
 import pytest
 
 from application.input_safety import sanitize_user_prompt
-from application.intent_router import ChatIntent, classify_intent, resolve_intent_query
+from application.intent_router import ChatIntent, classify_intent, classify_question_intent, resolve_intent_query
 from infrastructure.sql_safety import is_allowed_chat_query_template
 
 
@@ -36,23 +36,37 @@ def test_sanitize_user_prompt_flags_portuguese_prompt_injection_with_accents():
     ("question", "intent"),
     [
         ("Como alocar R$ 50k?", ChatIntent.ALLOCATION),
-        ("Quais se??es de campo priorizar?", ChatIntent.SECTIONS),
-        ("Mostre o mapa t?tico e custo", ChatIntent.FIELD_MAP),
+        ("Quais secoes de campo priorizar?", ChatIntent.SECTIONS),
+        ("Mostre o mapa tatico e custo", ChatIntent.FIELD_MAP),
         ("Compare clusters", ChatIntent.CLUSTERS),
-        ("Qual a m?dia total?", ChatIntent.STATS),
+        ("Qual a media total?", ChatIntent.STATS),
         ("Qual mensagem ideal e canal ideal?", ChatIntent.PRODUCT_RECOMMENDATION),
-        ("Liste os munic?pios principais", ChatIntent.RANKING),
+        ("Liste os municipios principais", ChatIntent.RANKING),
     ],
 )
 def test_classify_intent_maps_every_supported_intent(question, intent):
     assert classify_intent(question) == intent
 
 
+def test_classify_question_intent_returns_structured_regex_evidence():
+    result = classify_question_intent("Se eu investir R$50k aqui, qual canal ideal gera maior ROI politico?")
+
+    assert result.intent == ChatIntent.PRODUCT_RECOMMENDATION
+    assert result.confidence > 0
+    assert result.matched_patterns
+    assert "r$50k" in result.normalized_question
+
+
+def test_regex_classifier_handles_accents_and_word_boundaries():
+    assert classify_intent("Quais se??es eleitorais devem ir para campo?") == ChatIntent.SECTIONS
+    assert classify_intent("Compare a distribui??o por cluster Diamante") == ChatIntent.CLUSTERS
+
+
 @pytest.mark.parametrize(
     ("question", "table", "template_id"),
     [
         ("Como alocar R$ 50k?", "alocacao", "chat.allocation"),
-        ("Quais se??es de campo priorizar?", "secoes", "chat.sections"),
+        ("Quais secoes de campo priorizar?", "secoes", "chat.sections"),
         ("Mostre mapa tatico e custo", "mapa_tatico", "chat.field_map"),
         ("Compare clusters", "municipios", "chat.clusters"),
         ("Qual a media total?", "municipios", "chat.stats"),
@@ -64,6 +78,7 @@ def test_resolve_intent_query_returns_allowed_fixed_template(question, table, te
     query = resolve_intent_query(Repo({"municipios", table}), question)
     assert query.template_id == template_id
     assert query.required_table == table
+    assert query.confidence >= 0
     assert is_allowed_chat_query_template(query.template_id, query.sql)
 
 
@@ -71,6 +86,7 @@ def test_resolve_intent_query_falls_back_when_table_missing():
     query = resolve_intent_query(Repo({"municipios"}), "Como alocar budget?")
     assert query.intent == ChatIntent.RANKING
     assert query.template_id == "chat.ranking"
+    assert query.matched_patterns == ("fallback.missing_table",)
     assert "FROM municipios" in query.sql
 
 

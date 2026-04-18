@@ -8,18 +8,45 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.ruff.lint]
-# Fase 1: bloqueia erros de sintaxe/importacao e bugbear de baixo ruido.
+# Fase 2: inclui import sorting e checks Bandit de seguranca com ignores explicitos para legado/testes.
 # E501/E402 ficam fora ate a fase de formatacao/import hygiene do legado.
-select = ["E", "F", "W", "B"]
+select = ["E", "F", "W", "I", "B", "S"]
 ignore = ["E501", "E402"]
 
 [tool.ruff.lint.per-file-ignores]
 "api/main.py" = ["B008"]  # FastAPI Depends em endpoints declarativos.
 "api/security.py" = ["B008"]  # FastAPI Depends e um default declarativo esperado.
-"tests/**/*.py" = ["F401", "F841"]
+"infrastructure/medallion_pipeline.py" = ["S608"]  # SQL usa identificadores saneados antes de materializar marts DuckDB.
+"infrastructure/metadata_db.py" = ["S608"]  # WHERE opcional e fixo; valores continuam parametrizados.
+"infrastructure/notifiers.py" = ["S310"]  # Webhooks operacionais sao validados para http/https antes do envio.
+"presentation/ui.py" = ["S608"]  # Nome de tabela vem de chamadas internas controladas e passa por repo.table_exists.
+"tests/**/*.py" = ["F401", "F841", "S101", "S105", "S106", "S108", "S311", "S603"]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "venv", ".hfspace-deploy", ".hfspace-sync"]
 skips = [
   "B406", # xml.sax.saxutils.escape usado apenas para gerar XML XLSX, sem parse de XML externo.
 ]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+show_error_codes = true
+disable_error_code = ["import-untyped"]
+exclude = [
+  '^\.hfspace-.*$',
+  '^data_lake/',
+  '^ingestion/downloads/',
+  '^metadata/',
+  '^tmp/',
+  '^output/',
+]
+
+[[tool.mypy.overrides]]
+module = ["redis", "redis.*", "requests", "requests.*", "yaml", "yaml.*"]
+ignore_missing_imports = true
+

@@ -1,7 +1,6 @@
 import importlib.util
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -34,6 +33,9 @@ def test_is_allowed_table_name_accepts_only_known_tables():
     assert is_allowed_table_name("mart_recomendacao_alocacao")
     assert is_allowed_table_name("mart_midia_paga_municipio")
     assert is_allowed_table_name("mart_social_mensagem_territorial")
+    assert is_allowed_table_name("fact_zona_eleitoral")
+    assert is_allowed_table_name("fact_secao_eleitoral")
+    assert is_allowed_table_name("mart_alocacao_zona_eleitoral")
     assert not is_allowed_table_name("usuarios")
 
 

@@ -4,7 +4,6 @@ import pandas as pd
 
 from infrastructure.data_quality import apply_row_quality_scores
 
-
 SCORE_COLUMNS = [
     "score_potencial_eleitoral",
     "score_oportunidade",

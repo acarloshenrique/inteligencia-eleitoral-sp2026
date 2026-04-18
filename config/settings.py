@@ -1,14 +1,13 @@
+import tempfile
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-import tempfile
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from infrastructure.tenancy import build_tenant_context, normalize_tenant_id
-
 
 AppEnv = Literal["dev", "staging", "prod"]
 
@@ -48,6 +47,23 @@ class AppPaths:
     def features_root(self) -> Path:
         return self.lake_root / "features"
 
+    @property
+    def lakehouse_root(self) -> Path:
+        base = self.tenant_root if self.tenant_root is not None else self.data_root
+        return base / "lake"
+
+    @property
+    def semantic_root(self) -> Path:
+        return self.lakehouse_root / "semantic"
+
+    @property
+    def serving_root(self) -> Path:
+        return self.lakehouse_root / "serving"
+
+    @property
+    def lakehouse_catalog_root(self) -> Path:
+        return self.lakehouse_root / "catalog"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -64,6 +80,11 @@ class Settings(BaseSettings):
     rag_cost_per_1k_tokens_usd: float = Field(default=0.00059, alias="RAG_COST_PER_1K_TOKENS_USD")
     redis_url: str = Field(default="redis://redis:6379/0", alias="REDIS_URL")
     rq_queue_name: str = Field(default="jobs", alias="RQ_QUEUE_NAME")
+    api_rate_limit_enabled: bool = Field(default=True, alias="API_RATE_LIMIT_ENABLED")
+    api_rate_limit_backend: str = Field(default="redis", alias="API_RATE_LIMIT_BACKEND")
+    api_rate_limit_requests: int = Field(default=120, alias="API_RATE_LIMIT_REQUESTS")
+    api_rate_limit_window_seconds: int = Field(default=60, alias="API_RATE_LIMIT_WINDOW_SECONDS")
+    api_rate_limit_exempt_paths: str = Field(default="/health", alias="API_RATE_LIMIT_EXEMPT_PATHS")
     metadata_db_path: str | None = Field(default=None, alias="METADATA_DB_PATH")
     artifact_backend: str = Field(default="local", alias="ARTIFACT_BACKEND")
     artifact_local_root: str | None = Field(default=None, alias="ARTIFACT_LOCAL_ROOT")
@@ -138,6 +159,23 @@ class Settings(BaseSettings):
             raise ValueError("OPS_WEEKLY_UPDATE_DAY invalido")
         return day
 
+    @field_validator("api_rate_limit_backend", mode="before")
+    @classmethod
+    def validate_rate_limit_backend(cls, value):
+        backend = str(value or "redis").strip().lower()
+        allowed = {"redis", "memory"}
+        if backend not in allowed:
+            raise ValueError("API_RATE_LIMIT_BACKEND invalido. Use: redis ou memory.")
+        return backend
+
+    @field_validator("api_rate_limit_requests", "api_rate_limit_window_seconds", mode="before")
+    @classmethod
+    def validate_rate_limit_positive_int(cls, value):
+        number = int(value)
+        if number < 1:
+            raise ValueError("rate limit deve ser maior que zero")
+        return number
+
     @field_validator("chroma_vector_backend", mode="before")
     @classmethod
     def validate_chroma_backend(cls, value):
@@ -185,6 +223,16 @@ class Settings(BaseSettings):
             catalog_root,
             gold_root / "reports",
             gold_root / "serving",
+            effective_root / "lake",
+            effective_root / "lake" / "bronze",
+            effective_root / "lake" / "silver",
+            effective_root / "lake" / "gold",
+            effective_root / "lake" / "semantic",
+            effective_root / "lake" / "serving",
+            effective_root / "lake" / "catalog",
+            effective_root / "lake" / "manifests",
+            effective_root / "lake" / "lineage",
+            effective_root / "lake" / "duckdb",
             effective_root / "chromadb",
         ]:
             folder.mkdir(parents=True, exist_ok=True)

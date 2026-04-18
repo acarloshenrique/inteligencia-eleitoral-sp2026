@@ -1,0 +1,76 @@
+contracts:
+  - dataset_id: crosswalk_tse_ibge_municipios_sp
+    layer: gold
+    owner: data_platform
+    entity: municipio
+    fact_or_dimension: crosswalk
+    business_description: "Crosswalk auditável entre código municipal TSE e código municipal IBGE para municípios de SP."
+    source_name: "TSE seção/local + IBGE localidades"
+    source_url: "https://servicodados.ibge.gov.br/api/v1/localidades/estados/35/municipios"
+    granularity: "uf + cod_municipio_tse"
+    primary_key:
+      - uf
+      - cod_municipio_tse
+    required_columns:
+      - uf
+      - cod_municipio_tse
+      - cod_municipio_ibge
+      - municipio_join_strategy
+      - municipio_join_confidence
+    quality_rules:
+      - "coverage_ibge deve ser 1.0 para SP antes de publicar serving"
+      - "matches fuzzy devem manter confidence < 1.0 e municipio_join_strategy explícita"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/gold/territorial_electoral_master_index/crosswalk_tse_ibge_municipios_sp_tse2024_sp_secao_real_ibge_v2.parquet"
+
+  - dataset_id: fact_electoral_results_section
+    layer: gold
+    owner: analytics_engineering
+    entity: electoral_result
+    fact_or_dimension: fact
+    business_description: "Fact real de votação por candidato/votável, cargo, município, zona e seção."
+    source_name: "TSE votacao_secao_2024_SP"
+    granularity: "ano_eleicao + turno + uf + cod_municipio_tse + zona + secao + cargo + candidate_id"
+    primary_key:
+      - candidate_section_record_id
+    required_columns:
+      - ano_eleicao
+      - turno
+      - uf
+      - cod_municipio_tse
+      - cod_municipio_ibge
+      - zona
+      - secao
+      - candidate_id
+      - votos
+      - join_confidence
+    quality_rules:
+      - "sem CPF ou identificador individual de eleitor"
+      - "coverage_ibge deve ser 1.0"
+      - "join_confidence entre 0 e 1"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/gold/electoral_results_section/fact_electoral_results_section_tse2024_sp_secao_real_ibge_v2.parquet"
+
+  - dataset_id: section_to_census_sector_crosswalk
+    layer: gold
+    owner: data_platform
+    entity: setor_censitario
+    fact_or_dimension: crosswalk
+    business_description: "Crosswalk explícito seção/local de votação -> setor censitário. Ainda não materializado porque os ZIPs TSE não carregam CD_SETOR."
+    source_name: "IBGE malha de setores + geocoding/local votação ou fonte explícita"
+    granularity: "ano_eleicao + uf + cod_municipio_tse + zona + secao"
+    primary_key:
+      - ano_eleicao
+      - uf
+      - cod_municipio_tse
+      - zona
+      - secao
+    required_columns:
+      - cd_setor
+      - setor_join_strategy
+      - setor_join_confidence
+    quality_rules:
+      - "proibir preenchimento heurístico sem lineage de geocoding ou geometria"
+      - "joins aproximados devem ter confidence < 1.0"
+    lgpd_classification: public_open_data_aggregated
+    current_status: "not_available_requires_explicit_local_to_sector_crosswalk"

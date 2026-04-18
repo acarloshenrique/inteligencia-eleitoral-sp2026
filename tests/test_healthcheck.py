@@ -1,7 +1,6 @@
 import importlib.util
 from pathlib import Path
 
-
 MODULE_PATH = Path(__file__).resolve().parents[1] / "healthcheck.py"
 SPEC = importlib.util.spec_from_file_location("healthcheck_module", MODULE_PATH)
 healthcheck = importlib.util.module_from_spec(SPEC)

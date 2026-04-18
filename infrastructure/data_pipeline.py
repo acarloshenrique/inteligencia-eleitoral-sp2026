@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
 import hashlib
 import json
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -15,7 +15,6 @@ from domain.contracts import validate_municipios_input
 from infrastructure.dataset_catalog import build_dataset_metadata, register_dataset_version
 from infrastructure.env import df_municipios_vazio
 from infrastructure.load_manifest import build_load_manifest
-
 
 PIPELINE_VERSION = "v1"
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from email.message import EmailMessage
 import json
 import smtplib
-from typing import Any
+import urllib.parse
 import urllib.request
+from dataclasses import dataclass
+from email.message import EmailMessage
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,9 @@ def _alert_payload(alert: dict[str, Any]) -> dict[str, Any]:
 
 
 def _post_json(channel: str, url: str, payload: dict[str, Any], timeout_seconds: float) -> NotificationResult:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        return NotificationResult(channel=channel, ok=False, detail="invalid_webhook_scheme")
     try:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         request = urllib.request.Request(

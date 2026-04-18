@@ -1,27 +1,27 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
 import hashlib
 import json
+import unicodedata
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
-import unicodedata
 
 import pandas as pd
 
 from config.settings import AppPaths, get_settings
+from domain.open_data_contracts import (
+    validate_gold_mart_municipio_eleitoral,
+    validate_silver_dim_municipio,
+    validate_silver_dim_tempo,
+    validate_silver_dim_territorio,
+    validate_silver_fato_municipio,
+)
 from infrastructure.allocation_engine import (
     build_modular_allocation_scores,
     recommend_allocation,
     simulate_budget,
-)
-from domain.open_data_contracts import (
-    validate_gold_mart_municipio_eleitoral,
-    validate_silver_dim_tempo,
-    validate_silver_dim_territorio,
-    validate_silver_dim_municipio,
-    validate_silver_fato_municipio,
 )
 from infrastructure.allocation_strategy import load_allocation_strategy
 from infrastructure.data_quality import (

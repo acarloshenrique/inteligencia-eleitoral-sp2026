@@ -1,5 +1,5 @@
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Any, Sequence
 
 import pandas as pd
@@ -43,6 +43,48 @@ class DuckDBAnalyticsRepository(DataStore):
         if df.empty:
             return 0
         return int(df.iloc[0]["n"])
+
+
+class PandasAnalyticsRepository(DataStore):
+    def __init__(self, tables: dict[str, pd.DataFrame] | None = None):
+        self._tables = {name.lower(): df.copy() for name, df in (tables or {}).items()}
+
+    def table_exists(self, table: str) -> bool:
+        return is_allowed_table_name(table) and table.lower() in self._tables
+
+    def query_df(self, sql: str, params: Sequence[Any] | None = None) -> pd.DataFrame:
+        del params
+        sql_lower = " ".join(str(sql).lower().split())
+        table_name = ""
+        for candidate in self._tables:
+            if f"from {candidate}" in sql_lower:
+                table_name = candidate
+                break
+        if not table_name:
+            return pd.DataFrame()
+
+        df = self._tables[table_name].copy()
+        if "order by ranking_final" in sql_lower and "ranking_final" in df.columns:
+            df = df.sort_values("ranking_final")
+        if "order by score_alocacao" in sql_lower and "score_alocacao" in df.columns:
+            df = df.sort_values("score_alocacao", ascending=False)
+        if "order by eleitores_aptos" in sql_lower and "eleitores_aptos" in df.columns:
+            df = df.sort_values("eleitores_aptos", ascending=False)
+        if "limit " in sql_lower:
+            try:
+                limit = int(sql_lower.rsplit("limit ", 1)[1].split()[0])
+                df = df.head(limit)
+            except (IndexError, ValueError):
+                pass
+        return df
+
+    def register_table(self, name: str, df: pd.DataFrame) -> None:
+        if is_allowed_table_name(name):
+            self._tables[name.lower()] = df.copy()
+
+    def count_municipios(self) -> int:
+        df = self._tables.get("municipios", pd.DataFrame())
+        return len(df)
 
 
 class ParquetReportStore(ReportStore):

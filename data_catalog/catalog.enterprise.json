@@ -1,0 +1,2294 @@
+{
+  "version": "enterprise_data_catalog_v1",
+  "generated_by": "data_catalog.enterprise_registry",
+  "datasets": [
+    {
+      "dataset_id": "tse_boletim_urna_secao_bronze",
+      "nome": "Boletim de urna por secao",
+      "descricao": "Arquivo bruto do boletim de urna com votos por secao eleitoral, urna e cargo.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/dataset/boletim-de-urna",
+      "formato": "zip/csv",
+      "camada_alvo": "bronze",
+      "granularidade": "secao",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "TURNO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "CARGO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "SQ_CANDIDATO"
+      ],
+      "cobertura_temporal": {
+        "start": "2008",
+        "end": "latest",
+        "notes": "Coverage depends on TSE open-data availability by election."
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": "National; SP is the primary product scope."
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 100,
+      "status_ingestao": "ingested",
+      "estrategia_atualizacao": "Download by election year and UF; preserve original zip hash in bronze manifest.",
+      "observacoes_join": "Exact join by ANO_ELEICAO, SIGLA_UF, COD_MUN_TSE, ZONA and SECAO after TSE code normalization.",
+      "score_confiabilidade": 0.97,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_boletim_urna_secao_bronze.json",
+        "storage_path": "lake/bronze/tse_boletim_urna_secao_bronze",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "tse_resultados_eleitorais_secao_silver"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Foundation for electoral strength and section-level territorial precision.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "competicao"
+        ],
+        "perguntas_respondidas": [
+          "Where did the candidate perform by section?",
+          "Which sections show competitive pressure?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Critical source for electoral base strength."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "TURNO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "CARGO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "TURNO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "CARGO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "competicao"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": "Raw evidence retained before any aggregation."
+    },
+    {
+      "dataset_id": "tse_resultados_eleitorais_secao_silver",
+      "nome": "Resultados eleitorais por secao",
+      "descricao": "Resultados limpos e harmonizados por candidato, cargo, municipio, zona e secao.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "secao",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "TURNO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "SQ_CANDIDATO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "SQ_CANDIDATO",
+        "COD_MUN_TSE",
+        "COD_MUN_IBGE",
+        "ZONA",
+        "SECAO"
+      ],
+      "cobertura_temporal": {
+        "start": "2008",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 99,
+      "status_ingestao": "ingested",
+      "estrategia_atualizacao": "Reprocess idempotently from bronze when TSE releases corrected files.",
+      "observacoes_join": "Requires crosswalk for COD_MUN_TSE to COD_MUN_IBGE when enriching with IBGE sources.",
+      "score_confiabilidade": 0.95,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_resultados_eleitorais_secao_silver.json",
+        "storage_path": "lake/silver/tse_resultados_eleitorais_secao_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [
+          "tse_boletim_urna_secao_bronze"
+        ],
+        "lineage_downstream": [
+          "gold_fact_territorio_eleitoral",
+          "gold_metricas_prioridade_territorial"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Canonical source for candidate performance, ranking and competitive analysis.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "competicao",
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "What is the candidate base by section?",
+          "Where is expansion plausible?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Input for base strength, retention and competition scores."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "TURNO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "SQ_CANDIDATO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "TURNO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "SQ_CANDIDATO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "tse_boletim_urna_secao_bronze",
+          "dependency_type": "source",
+          "required": true,
+          "join_keys": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO"
+          ],
+          "join_confidence": 1.0,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "competicao",
+        "contexto_candidato"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tse_perfil_eleitorado_secao_silver",
+      "nome": "Perfil do eleitorado por secao",
+      "descricao": "Perfil agregado de eleitorado por secao com faixa etaria, genero e escolaridade.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "secao",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "PERFIL_DIMENSAO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO"
+      ],
+      "cobertura_temporal": {
+        "start": "2014",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 96,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Refresh every election cycle and validate only aggregated demographic buckets.",
+      "observacoes_join": "Exact by TSE territorial keys; never join to individual voter records.",
+      "score_confiabilidade": 0.92,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_perfil_eleitorado_secao_silver.json",
+        "storage_path": "lake/silver/tse_perfil_eleitorado_secao_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "gold_fact_territorio_eleitoral"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Adds aggregated electorate context without individual microtargeting.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional",
+          "forca_eleitoral"
+        ],
+        "perguntas_respondidas": [
+          "Which sections have relevant aggregate demographic context?",
+          "Where should messages be localized?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Allowed only as aggregated territorial signal."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "PERFIL_DIMENSAO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "PERFIL_DIMENSAO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional",
+        "forca_eleitoral"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tse_eleitorado_local_votacao_silver",
+      "nome": "Eleitorado por local de votacao",
+      "descricao": "Locais de votacao, secoes associadas, endereco e eleitorado agregado.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "secao",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "LOCAL_VOTACAO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_TSE",
+        "COD_MUN_IBGE",
+        "ZONA",
+        "SECAO",
+        "CD_SETOR"
+      ],
+      "cobertura_temporal": {
+        "start": "2016",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 95,
+      "status_ingestao": "ingested",
+      "estrategia_atualizacao": "Refresh by election year; preserve geocoding confidence as a data quality metric.",
+      "observacoes_join": "Exact on TSE keys; approximate geospatial join to census sectors must retain confidence flag.",
+      "score_confiabilidade": 0.9,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_eleitorado_local_votacao_silver.json",
+        "storage_path": "lake/silver/tse_eleitorado_local_votacao_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "gold_fact_territorio_eleitoral"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Supports operational planning by physical voting place and section cluster.",
+        "funcionalidades_suportadas": [
+          "capacidade_operacional",
+          "forca_eleitoral"
+        ],
+        "perguntas_respondidas": [
+          "Where are the high-impact voting places?",
+          "What local operation is feasible by zone?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Core for field operations and logistics."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "LOCAL_VOTACAO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO",
+            "LOCAL_VOTACAO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "capacidade_operacional",
+        "forca_eleitoral"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tse_cadastro_candidatos_silver",
+      "nome": "Cadastro de candidatos",
+      "descricao": "Candidate registration attributes needed for CandidateProfile and election context.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "candidato",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SQ_CANDIDATO",
+        "SG_UF",
+        "CD_CARGO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "SQ_CANDIDATO",
+        "NR_CPF_CANDIDATO_MASKED",
+        "COD_MUN_IBGE"
+      ],
+      "cobertura_temporal": {
+        "start": "2008",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_personal",
+      "prioridade_produto": 93,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Refresh every election cycle; expose only fields needed for candidate context.",
+      "observacoes_join": "Exact by SQ_CANDIDATO; personal fields must be minimized and masked in logs.",
+      "score_confiabilidade": 0.93,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_cadastro_candidatos_silver.json",
+        "storage_path": "lake/silver/tse_cadastro_candidatos_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SG_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "gold_candidate_context"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Initial structured profile for candidate context and eligibility filters.",
+        "funcionalidades_suportadas": [
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "Who is the candidate?",
+          "Which race, party and territorial origin define the context?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Seed for Candidate Context Engine."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "SG_UF",
+            "CD_CARGO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "SG_UF",
+            "CD_CARGO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "contexto_candidato"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tse_prestacao_contas_candidato_silver",
+      "nome": "Prestacao de contas por candidato",
+      "descricao": "Campaign revenue and expenses aggregated by candidate and declared geography where available.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "candidato",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SQ_CANDIDATO",
+        "TIPO_MOVIMENTO",
+        "ID_DOCUMENTO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "SQ_CANDIDATO",
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE"
+      ],
+      "cobertura_temporal": {
+        "start": "2012",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_personal",
+      "prioridade_produto": 90,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Refresh during and after campaign reporting windows; reconcile corrected filings.",
+      "observacoes_join": "Territorial attribution is partial because many expenses are not declared at section/zone level.",
+      "score_confiabilidade": 0.84,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_prestacao_contas_candidato_silver.json",
+        "storage_path": "lake/silver/tse_prestacao_contas_candidato_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SG_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "gold_metricas_prioridade_territorial"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Supports spend efficiency and estimated cost-per-vote analysis.",
+        "funcionalidades_suportadas": [
+          "eficiencia_gasto",
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "How expensive was the campaign performance?",
+          "Where are spend signals weak or missing?"
+        ],
+        "lacunas_conhecidas": [
+          "Many expenses lack reliable municipal or zone attribution."
+        ],
+        "documentacao_negocio": "Use as aggregate efficiency signal, not deterministic local spend."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "TIPO_MOVIMENTO",
+            "ID_DOCUMENTO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "TIPO_MOVIMENTO",
+            "ID_DOCUMENTO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "eficiencia_gasto",
+        "contexto_candidato"
+      ],
+      "lacunas": [
+        "Territorial allocation of expenses may require modeling assumptions."
+      ],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "ibge_malha_setores_censitarios_bronze",
+      "nome": "Malha de setores censitarios",
+      "descricao": "Raw geospatial census-sector boundaries for territorial joins and spatial enrichment.",
+      "fonte": "IBGE",
+      "url": "https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais.html",
+      "formato": "shp/geopackage",
+      "camada_alvo": "bronze",
+      "granularidade": "setor_censitario",
+      "periodicidade": "decenal",
+      "chave_primaria": [
+        "CD_SETOR",
+        "COD_MUN_IBGE"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "CD_SETOR"
+      ],
+      "cobertura_temporal": {
+        "start": "2010",
+        "end": "2022",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 88,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Version by census year; retain original geometry and checksum.",
+      "observacoes_join": "Municipality joins are exact; voting-place to sector joins are geospatial and must be flagged.",
+      "score_confiabilidade": 0.91,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/ibge_malha_setores_censitarios_bronze.json",
+        "storage_path": "lake/bronze/ibge_malha_setores_censitarios_bronze",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_CENSO",
+          "UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "ibge_censo_2022_agregados_setor_silver",
+          "gold_fact_territorio_eleitoral"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Enables high-granularity territorial context around voting places.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional"
+        ],
+        "perguntas_respondidas": [
+          "Which census sectors surround priority voting places?",
+          "Where do territorial constraints affect operations?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Spatial backbone for census enrichment."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "CD_SETOR",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "CD_SETOR",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "ibge_censo_2022_agregados_setor_silver",
+      "nome": "Agregados censitarios do Censo 2022",
+      "descricao": "Aggregated census indicators by sector for income, households, age and education proxies.",
+      "fonte": "IBGE/SIDRA",
+      "url": "https://sidra.ibge.gov.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "setor_censitario",
+      "periodicidade": "decenal",
+      "chave_primaria": [
+        "ANO_CENSO",
+        "CD_SETOR",
+        "INDICADOR"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "CD_SETOR",
+        "COD_MUN_IBGE"
+      ],
+      "cobertura_temporal": {
+        "start": "2022",
+        "end": "2022",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 87,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Snapshot by census release; normalize indicators into controlled thematic dictionary.",
+      "observacoes_join": "Exact by CD_SETOR when sector is available; otherwise aggregate to municipality.",
+      "score_confiabilidade": 0.88,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/ibge_censo_2022_agregados_setor_silver.json",
+        "storage_path": "lake/silver/ibge_censo_2022_agregados_setor_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_CENSO",
+          "UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [
+          "ibge_malha_setores_censitarios_bronze"
+        ],
+        "lineage_downstream": [
+          "gold_fact_territorio_eleitoral"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Creates territorial theme signals and socioeconomic context for recommendations.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional",
+          "competicao"
+        ],
+        "perguntas_respondidas": [
+          "Which themes are territorially relevant?",
+          "Where does socioeconomic context support a message?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Use only aggregated census metrics."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_CENSO",
+            "CD_SETOR",
+            "INDICADOR"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_CENSO",
+            "CD_SETOR",
+            "INDICADOR"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "ibge_malha_setores_censitarios_bronze",
+          "dependency_type": "source",
+          "required": true,
+          "join_keys": [
+            "CD_SETOR"
+          ],
+          "join_confidence": 1.0,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional",
+        "competicao"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "inep_censo_escolar_municipio_silver",
+      "nome": "Censo Escolar por municipio",
+      "descricao": "Education infrastructure and enrollment indicators aggregated by municipality.",
+      "fonte": "INEP",
+      "url": "https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "municipio",
+      "periodicidade": "anual",
+      "chave_primaria": [
+        "ANO",
+        "COD_MUN_IBGE"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE"
+      ],
+      "cobertura_temporal": {
+        "start": "2007",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 74,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Annual ingestion with municipal aggregation and indicator dictionary.",
+      "observacoes_join": "Join to electoral data through TSE-IBGE municipal crosswalk.",
+      "score_confiabilidade": 0.86,
+      "tier": 2,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/inep_censo_escolar_municipio_silver.json",
+        "storage_path": "lake/silver/inep_censo_escolar_municipio_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO",
+          "UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Supports education theme prioritization and local operational context.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional"
+        ],
+        "perguntas_respondidas": [
+          "Where is education a strong territorial theme?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "datasus_cnes_municipio_silver",
+      "nome": "CNES por municipio",
+      "descricao": "Health facilities and capacity indicators aggregated by municipality.",
+      "fonte": "DATASUS/CNES",
+      "url": "https://datasus.saude.gov.br/transferencia-de-arquivos/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "municipio",
+      "periodicidade": "mensal",
+      "chave_primaria": [
+        "ANO",
+        "MES",
+        "COD_MUN_IBGE"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE"
+      ],
+      "cobertura_temporal": {
+        "start": "2005",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 72,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Monthly incremental load by UF and year/month.",
+      "observacoes_join": "Join through COD_MUN_IBGE after municipal crosswalk.",
+      "score_confiabilidade": 0.84,
+      "tier": 2,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/datasus_cnes_municipio_silver.json",
+        "storage_path": "lake/silver/datasus_cnes_municipio_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO",
+          "MES",
+          "UF"
+        ],
+        "incremental_key": "ANO_MES",
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Supports health theme and public-service capacity context.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional"
+        ],
+        "perguntas_respondidas": [
+          "Where is health infrastructure a relevant theme?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO",
+            "MES",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO",
+            "MES",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 0.9
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tesouro_siconfi_municipio_silver",
+      "nome": "Siconfi por municipio",
+      "descricao": "Municipal fiscal and budget indicators from Siconfi.",
+      "fonte": "Tesouro Nacional/Siconfi",
+      "url": "https://siconfi.tesouro.gov.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "municipio",
+      "periodicidade": "anual",
+      "chave_primaria": [
+        "ANO",
+        "COD_MUN_IBGE",
+        "CONTA"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE"
+      ],
+      "cobertura_temporal": {
+        "start": "2013",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 66,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Annual load after fiscal publication; retain account taxonomy version.",
+      "observacoes_join": "Municipal join only; no section-level precision without allocation model.",
+      "score_confiabilidade": 0.8,
+      "tier": 2,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tesouro_siconfi_municipio_silver.json",
+        "storage_path": "lake/silver/tesouro_siconfi_municipio_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO",
+          "UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Adds fiscal context for operational feasibility and local public-service themes.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "capacidade_operacional"
+        ],
+        "perguntas_respondidas": [
+          "Which municipalities show fiscal constraints or capacity?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO",
+            "COD_MUN_IBGE",
+            "CONTA"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO",
+            "COD_MUN_IBGE",
+            "CONTA"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "capacidade_operacional"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "ssp_sp_criminalidade_municipio_silver",
+      "nome": "SSP-SP criminalidade por municipio",
+      "descricao": "Public security indicators aggregated by municipality in Sao Paulo.",
+      "fonte": "SSP-SP",
+      "url": "https://www.ssp.sp.gov.br/estatistica",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "municipio",
+      "periodicidade": "mensal",
+      "chave_primaria": [
+        "ANO",
+        "MES",
+        "COD_MUN_IBGE",
+        "INDICADOR"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE"
+      ],
+      "cobertura_temporal": {
+        "start": "2001",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "SP",
+        "end": "SP",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_aggregated",
+      "prioridade_produto": 64,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Monthly ingestion and dictionary mapping of crime categories.",
+      "observacoes_join": "SP-only dataset; must be excluded from national runs unless coverage flag is SP.",
+      "score_confiabilidade": 0.78,
+      "tier": 2,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/ssp_sp_criminalidade_municipio_silver.json",
+        "storage_path": "lake/silver/ssp_sp_criminalidade_municipio_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO",
+          "MES"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Supports security theme analysis for SP campaigns.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "competicao"
+        ],
+        "perguntas_respondidas": [
+          "Where is public security a relevant territorial theme?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO",
+            "MES",
+            "COD_MUN_IBGE",
+            "INDICADOR"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO",
+            "MES",
+            "COD_MUN_IBGE",
+            "INDICADOR"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 0.9
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "competicao"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "territorial_auxiliar_crosswalk_gold",
+      "nome": "Crosswalk territorial TSE-IBGE",
+      "descricao": "Canonical crosswalk between TSE municipality codes, IBGE municipality codes and normalized names.",
+      "fonte": "TSE/IBGE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "gold",
+      "granularidade": "municipio",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "COD_MUN_IBGE"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_TSE",
+        "COD_MUN_IBGE"
+      ],
+      "cobertura_temporal": {
+        "start": "2008",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "derived_aggregate",
+      "prioridade_produto": 98,
+      "status_ingestao": "ingested",
+      "estrategia_atualizacao": "Rebuild when electoral or IBGE municipal codes change; persist ambiguity report.",
+      "observacoes_join": "Exact when both codes exist; name-based fallback must record match confidence and ambiguity.",
+      "score_confiabilidade": 0.94,
+      "tier": 2,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/territorial_auxiliar_crosswalk_gold.json",
+        "storage_path": "lake/gold/territorial_auxiliar_crosswalk_gold",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": [
+          "gold_fact_territorio_eleitoral",
+          "gold_metricas_prioridade_territorial"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Prevents unreliable joins between electoral and socioeconomic data.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "tematica_territorial",
+          "capacidade_operacional",
+          "eficiencia_gasto"
+        ],
+        "perguntas_respondidas": [
+          "Can electoral and IBGE datasets be joined safely?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Core governed join asset."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "COD_MUN_IBGE"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "tse_resultados_eleitorais_secao_silver",
+          "dependency_type": "source",
+          "required": true,
+          "join_keys": [
+            "COD_MUN_TSE"
+          ],
+          "join_confidence": 1.0,
+          "notes": ""
+        },
+        {
+          "dataset_id": "ibge_malha_setores_censitarios_bronze",
+          "dependency_type": "source",
+          "required": true,
+          "join_keys": [
+            "COD_MUN_IBGE"
+          ],
+          "join_confidence": 1.0,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "tematica_territorial",
+        "capacidade_operacional",
+        "eficiencia_gasto"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "tse_redes_sociais_candidatos_silver",
+      "nome": "Redes sociais declaradas por candidatos",
+      "descricao": "Public social media handles declared by candidates to electoral authorities.",
+      "fonte": "TSE",
+      "url": "https://dadosabertos.tse.jus.br/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "candidato",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SQ_CANDIDATO",
+        "URL_REDE_SOCIAL"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "SQ_CANDIDATO"
+      ],
+      "cobertura_temporal": {
+        "start": "2018",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "public_open_data_personal",
+      "prioridade_produto": 56,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Refresh from candidate registration datasets and keep only declared public URLs.",
+      "observacoes_join": "Exact by SQ_CANDIDATO; do not enrich with follower-level personal data.",
+      "score_confiabilidade": 0.76,
+      "tier": 3,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/tse_redes_sociais_candidatos_silver.json",
+        "storage_path": "lake/silver/tse_redes_sociais_candidatos_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SG_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Complements candidate context with declared public communication channels.",
+        "funcionalidades_suportadas": [
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "Which public channels are officially declared by the candidate?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "URL_REDE_SOCIAL"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SQ_CANDIDATO",
+            "URL_REDE_SOCIAL"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "contexto_candidato"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "meta_ad_library_campanha_silver",
+      "nome": "Meta Ad Library por campanha",
+      "descricao": "Public political ad metadata, spend ranges and impression ranges from Meta Ad Library.",
+      "fonte": "Meta Ad Library",
+      "url": "https://www.facebook.com/ads/library/api/",
+      "formato": "json/parquet",
+      "camada_alvo": "silver",
+      "granularidade": "campanha",
+      "periodicidade": "diaria",
+      "chave_primaria": [
+        "AD_ID",
+        "DATE_START",
+        "PAGE_ID"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "SQ_CANDIDATO",
+        "COD_MUN_IBGE",
+        "UF"
+      ],
+      "cobertura_temporal": {
+        "start": "2019",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": "Political ads API coverage depends on platform availability."
+      },
+      "sensibilidade": "manual_review_required",
+      "prioridade_produto": 58,
+      "status_ingestao": "not_started",
+      "estrategia_atualizacao": "Daily incremental API load with query audit and spend-range normalization.",
+      "observacoes_join": "Candidate/page matching is probabilistic and requires manual review or declared-page evidence.",
+      "score_confiabilidade": 0.62,
+      "tier": 3,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/meta_ad_library_campanha_silver.json",
+        "storage_path": "lake/silver/meta_ad_library_campanha_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "DATE_START",
+          "UF"
+        ],
+        "incremental_key": "DATE_START",
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Adds paid media context and channel efficiency when public evidence is reliable.",
+        "funcionalidades_suportadas": [
+          "eficiencia_gasto",
+          "competicao",
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "Which messages and channels are visible in paid media?",
+          "Where is competitor spend visible?"
+        ],
+        "lacunas_conhecidas": [
+          "Spend is often a range and territory attribution can be incomplete."
+        ],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "AD_ID",
+            "DATE_START",
+            "PAGE_ID"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "AD_ID",
+            "DATE_START",
+            "PAGE_ID"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 0.85
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "eficiencia_gasto",
+        "competicao",
+        "contexto_candidato"
+      ],
+      "lacunas": [
+        "Requires platform access and policy-compliant collection strategy."
+      ],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "sinais_digitais_competitivos_municipio_silver",
+      "nome": "Sinais digitais e competitivos agregados",
+      "descricao": "Aggregated public digital trend and competitive signals by theme and territory.",
+      "fonte": "Public aggregated digital sources",
+      "url": "https://trends.google.com/",
+      "formato": "parquet",
+      "camada_alvo": "silver",
+      "granularidade": "municipio",
+      "periodicidade": "semanal",
+      "chave_primaria": [
+        "ANO",
+        "SEMANA",
+        "COD_MUN_IBGE",
+        "TEMA",
+        "FONTE"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "COD_MUN_TSE",
+        "TEMA"
+      ],
+      "cobertura_temporal": {
+        "start": "2020",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": "Coverage depends on source sample thresholds."
+      },
+      "sensibilidade": "manual_review_required",
+      "prioridade_produto": 46,
+      "status_ingestao": "manual_review",
+      "estrategia_atualizacao": "Weekly load only for aggregate public signals; require source confidence scoring.",
+      "observacoes_join": "Use as weak signal only; never infer individual preference or voter-level behavior.",
+      "score_confiabilidade": 0.48,
+      "tier": 3,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/sinais_digitais_competitivos_municipio_silver.json",
+        "storage_path": "lake/silver/sinais_digitais_competitivos_municipio_silver",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO",
+          "SEMANA",
+          "UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Adds exploratory theme demand signals where public aggregate coverage is sufficient.",
+        "funcionalidades_suportadas": [
+          "tematica_territorial",
+          "competicao"
+        ],
+        "perguntas_respondidas": [
+          "Which themes show public aggregate attention by territory?"
+        ],
+        "lacunas_conhecidas": [
+          "Source sampling and API limits can bias small territories."
+        ],
+        "documentacao_negocio": ""
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO",
+            "SEMANA",
+            "COD_MUN_IBGE",
+            "TEMA",
+            "FONTE"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO",
+            "SEMANA",
+            "COD_MUN_IBGE",
+            "TEMA",
+            "FONTE"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 0.75
+        }
+      ],
+      "dependencies": [],
+      "product_capabilities": [
+        "tematica_territorial",
+        "competicao"
+      ],
+      "lacunas": [
+        "Needs governance review before commercial use."
+      ],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "gold_fact_territorio_eleitoral",
+      "nome": "Fato territorio eleitoral",
+      "descricao": "Gold fact table joining electoral, territorial, census and location signals by section/zone/municipality.",
+      "fonte": "Derived lakehouse gold",
+      "url": "lake://gold/gold_fact_territorio_eleitoral",
+      "formato": "parquet",
+      "camada_alvo": "gold",
+      "granularidade": "secao",
+      "periodicidade": "eleitoral",
+      "chave_primaria": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "COD_MUN_IBGE",
+        "CD_SETOR",
+        "SQ_CANDIDATO"
+      ],
+      "cobertura_temporal": {
+        "start": "2014",
+        "end": "latest",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "BR",
+        "end": "BR",
+        "notes": ""
+      },
+      "sensibilidade": "derived_aggregate",
+      "prioridade_produto": 99,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Rebuild after any upstream TSE/IBGE source changes; persist join-confidence columns.",
+      "observacoes_join": "Uses exact TSE joins and crosswalk-mediated IBGE joins; geospatial sector joins remain approximate.",
+      "score_confiabilidade": 0.9,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/gold_fact_territorio_eleitoral.json",
+        "storage_path": "lake/gold/gold_fact_territorio_eleitoral",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [
+          "tse_resultados_eleitorais_secao_silver",
+          "tse_eleitorado_local_votacao_silver",
+          "tse_perfil_eleitorado_secao_silver",
+          "territorial_auxiliar_crosswalk_gold",
+          "ibge_censo_2022_agregados_setor_silver"
+        ],
+        "lineage_downstream": [
+          "gold_metricas_prioridade_territorial",
+          "gold_recomendacao_alocacao_serving"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Canonical analytical table for territorial ranking, maps and score generation.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "competicao",
+          "tematica_territorial",
+          "capacidade_operacional",
+          "eficiencia_gasto"
+        ],
+        "perguntas_respondidas": [
+          "What data exists for each section?",
+          "What confidence should be attached to each territorial join?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Primary governed fact table for decision intelligence."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "tse_resultados_eleitorais_secao_silver",
+          "dependency_type": "gold_input",
+          "required": true,
+          "join_keys": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA",
+            "SECAO"
+          ],
+          "join_confidence": 1.0,
+          "notes": ""
+        },
+        {
+          "dataset_id": "territorial_auxiliar_crosswalk_gold",
+          "dependency_type": "crosswalk",
+          "required": true,
+          "join_keys": [
+            "COD_MUN_TSE",
+            "COD_MUN_IBGE"
+          ],
+          "join_confidence": 0.94,
+          "notes": ""
+        },
+        {
+          "dataset_id": "ibge_censo_2022_agregados_setor_silver",
+          "dependency_type": "enrichment",
+          "required": true,
+          "join_keys": [
+            "CD_SETOR"
+          ],
+          "join_confidence": 0.82,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "competicao",
+        "tematica_territorial",
+        "capacidade_operacional",
+        "eficiencia_gasto"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "gold_metricas_prioridade_territorial",
+      "nome": "Metricas de prioridade territorial",
+      "descricao": "Gold score table with base strength, expansion, competition, cost efficiency and operational capacity.",
+      "fonte": "Derived scoring engine",
+      "url": "lake://gold/gold_metricas_prioridade_territorial",
+      "formato": "parquet",
+      "camada_alvo": "gold",
+      "granularidade": "zona",
+      "periodicidade": "semanal",
+      "chave_primaria": [
+        "RUN_ID",
+        "CANDIDATE_ID",
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "CANDIDATE_ID",
+        "COD_MUN_TSE",
+        "COD_MUN_IBGE",
+        "ZONA"
+      ],
+      "cobertura_temporal": {
+        "start": "current_cycle",
+        "end": "current_cycle",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "configured_scope",
+        "end": "configured_scope",
+        "notes": ""
+      },
+      "sensibilidade": "derived_aggregate",
+      "prioridade_produto": 97,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Recompute after ingestion updates or strategy-weight configuration changes.",
+      "observacoes_join": "Consumes governed gold fact and candidate context; output must retain component-level explanations.",
+      "score_confiabilidade": 0.86,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/gold_metricas_prioridade_territorial.json",
+        "storage_path": "lake/gold/gold_metricas_prioridade_territorial",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "RUN_ID",
+          "SIGLA_UF"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [
+          "gold_fact_territorio_eleitoral",
+          "tse_prestacao_contas_candidato_silver"
+        ],
+        "lineage_downstream": [
+          "gold_recomendacao_alocacao_serving"
+        ]
+      },
+      "business_metadata": {
+        "finalidade_produto": "Turns data assets into decision-oriented territory scores.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "competicao",
+          "eficiencia_gasto",
+          "tematica_territorial",
+          "capacidade_operacional"
+        ],
+        "perguntas_respondidas": [
+          "Which territories deserve priority?",
+          "Why is a territory high or low priority?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Business-facing scoring table."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "RUN_ID",
+            "CANDIDATE_ID",
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "RUN_ID",
+            "CANDIDATE_ID",
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "gold_fact_territorio_eleitoral",
+          "dependency_type": "gold_input",
+          "required": true,
+          "join_keys": [
+            "ANO_ELEICAO",
+            "SIGLA_UF",
+            "COD_MUN_TSE",
+            "ZONA"
+          ],
+          "join_confidence": 0.9,
+          "notes": ""
+        },
+        {
+          "dataset_id": "tse_prestacao_contas_candidato_silver",
+          "dependency_type": "enrichment",
+          "required": true,
+          "join_keys": [
+            "SQ_CANDIDATO"
+          ],
+          "join_confidence": 0.78,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "competicao",
+        "eficiencia_gasto",
+        "tematica_territorial",
+        "capacidade_operacional"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    },
+    {
+      "dataset_id": "gold_recomendacao_alocacao_serving",
+      "nome": "Recomendacao de alocacao para serving",
+      "descricao": "Allocation recommendations with suggested action, budget share, confidence and evidence links.",
+      "fonte": "Derived allocation engine",
+      "url": "lake://gold/gold_recomendacao_alocacao_serving",
+      "formato": "parquet/json",
+      "camada_alvo": "gold",
+      "granularidade": "zona",
+      "periodicidade": "sob_demanda",
+      "chave_primaria": [
+        "SCENARIO_ID",
+        "CANDIDATE_ID",
+        "TERRITORIO_ID",
+        "TIPO_ACAO"
+      ],
+      "chaves_estrangeiras_possiveis": [
+        "CANDIDATE_ID",
+        "TERRITORIO_ID",
+        "RUN_ID"
+      ],
+      "cobertura_temporal": {
+        "start": "current_cycle",
+        "end": "current_cycle",
+        "notes": ""
+      },
+      "cobertura_geografica": {
+        "start": "configured_scope",
+        "end": "configured_scope",
+        "notes": ""
+      },
+      "sensibilidade": "campaign_operational_confidential",
+      "prioridade_produto": 96,
+      "status_ingestao": "available",
+      "estrategia_atualizacao": "Generated per scenario; version every recommendation run with evidence manifest.",
+      "observacoes_join": "Serving output must link back to score run and evidence records; not a raw data source.",
+      "score_confiabilidade": 0.84,
+      "tier": 1,
+      "technical_metadata": {
+        "owner_logico": "data-platform",
+        "schema_uri": "data_catalog/schemas/gold_recomendacao_alocacao_serving.json",
+        "storage_path": "lake/gold/gold_recomendacao_alocacao_serving",
+        "formato_canonico": "parquet",
+        "particionamento": [
+          "SCENARIO_ID"
+        ],
+        "incremental_key": null,
+        "lineage_upstream": [
+          "gold_metricas_prioridade_territorial",
+          "gold_fact_territorio_eleitoral"
+        ],
+        "lineage_downstream": []
+      },
+      "business_metadata": {
+        "finalidade_produto": "Commercial decision artifact for budget allocation and executive reporting.",
+        "funcionalidades_suportadas": [
+          "forca_eleitoral",
+          "competicao",
+          "eficiencia_gasto",
+          "tematica_territorial",
+          "capacidade_operacional",
+          "contexto_candidato"
+        ],
+        "perguntas_respondidas": [
+          "Where should campaign resources go?",
+          "What is the evidence behind each recommendation?"
+        ],
+        "lacunas_conhecidas": [],
+        "documentacao_negocio": "Serving contract for API, Streamlit UI and client reports."
+      },
+      "quality_rules": [
+        {
+          "rule_id": "schema_required_columns",
+          "description": "All required analytical columns must be present before promotion.",
+          "severity": "critical",
+          "check_type": "schema",
+          "target_columns": [
+            "SCENARIO_ID",
+            "CANDIDATE_ID",
+            "TERRITORIO_ID",
+            "TIPO_ACAO"
+          ],
+          "threshold": null
+        },
+        {
+          "rule_id": "primary_key_uniqueness",
+          "description": "Primary key must be unique inside the declared coverage and partition.",
+          "severity": "high",
+          "check_type": "uniqueness",
+          "target_columns": [
+            "SCENARIO_ID",
+            "CANDIDATE_ID",
+            "TERRITORIO_ID",
+            "TIPO_ACAO"
+          ],
+          "threshold": 0.995
+        },
+        {
+          "rule_id": "freshness_within_expected_period",
+          "description": "Dataset must be refreshed according to its declared periodicity or marked stale.",
+          "severity": "medium",
+          "check_type": "freshness",
+          "target_columns": [],
+          "threshold": 1.0
+        }
+      ],
+      "dependencies": [
+        {
+          "dataset_id": "gold_metricas_prioridade_territorial",
+          "dependency_type": "serving_input",
+          "required": true,
+          "join_keys": [
+            "RUN_ID",
+            "CANDIDATE_ID"
+          ],
+          "join_confidence": 0.86,
+          "notes": ""
+        },
+        {
+          "dataset_id": "gold_fact_territorio_eleitoral",
+          "dependency_type": "serving_input",
+          "required": true,
+          "join_keys": [
+            "TERRITORIO_ID"
+          ],
+          "join_confidence": 0.9,
+          "notes": ""
+        }
+      ],
+      "product_capabilities": [
+        "forca_eleitoral",
+        "competicao",
+        "eficiencia_gasto",
+        "tematica_territorial",
+        "capacidade_operacional",
+        "contexto_candidato"
+      ],
+      "lacunas": [],
+      "owner": "data-platform",
+      "lineage_notes": ""
+    }
+  ]
+}

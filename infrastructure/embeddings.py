@@ -5,7 +5,6 @@ from typing import Any, Iterable
 
 import numpy as np
 
-
 DEFAULT_EMBEDDING_MODEL_ID = "Xenova/all-MiniLM-L6-v2"
 DEFAULT_ONNX_MODEL_FILE = "onnx/model.onnx"
 DEFAULT_MAX_LENGTH = 256

@@ -14,6 +14,9 @@ pytest-cache-files-*/
 # Dados sensiveis - nunca commitar parquets com dados de eleitores
 ingestion/**/*.parquet
 ingestion/**/*.csv
+ingestion/downloads/
+ingestion/**/*.zip
+ingestion/**/*.zip.tmp
 lake/bronze/**/*.parquet
 lake/bronze/**/*.csv
 lake/silver/**/*.parquet
@@ -21,6 +24,14 @@ lake/silver/**/*.csv
 lake/gold/**/*.parquet
 lake/gold/**/*.csv
 lake/gold/**/*.xlsx
+lake/semantic/**/*.parquet
+lake/semantic/**/*.csv
+lake/serving/**/*.parquet
+lake/serving/**/*.csv
+lake/serving/**/*.json
+lake/**/*.duckdb
+data_lake/silver/**/*.parquet
+data_lake/gold/**/*.parquet
 data/cache_tse/*.parquet
 data/cache_tse/*.zip
 
@@ -44,6 +55,9 @@ Thumbs.db
 .mypy_cache/
 output/
 tmp/
+artifacts/commercial/
+commercial_snapshots/
+.pre-commit-cache/
 *.log
 mypy_out.txt
 ci_job_*.log

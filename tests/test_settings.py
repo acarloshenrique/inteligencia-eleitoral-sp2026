@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-
 MODULE_PATH = Path(__file__).resolve().parents[1] / "config" / "settings.py"
 SPEC = importlib.util.spec_from_file_location("settings_module", MODULE_PATH)
 settings_module = importlib.util.module_from_spec(SPEC)

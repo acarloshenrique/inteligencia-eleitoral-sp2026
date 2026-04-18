@@ -25,3 +25,8 @@
         language: system
         pass_filenames: true
         always_run: true
+      - id: mypy-critical-path
+        name: mypy critical path
+        entry: mypy --no-incremental --disable-error-code import-untyped api/decision_contracts.py api/main.py application/candidate_registry_service.py application/decision_platform_service.py application/territorial_master_service.py application/evidence_service.py application/explanation_service.py domain/decision_models.py scoring allocation ingestion data_catalog
+        language: system
+        pass_filenames: false

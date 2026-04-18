@@ -1,5 +1,6 @@
 import re
 
+from infrastructure.privacy import sql_references_sensitive_columns
 
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ALLOWED_TABLES = frozenset(
@@ -18,6 +19,12 @@ ALLOWED_TABLES = frozenset(
         "mart_midia_paga_municipio",
         "mart_social_mensagem_territorial",
         "mart_social_canal_regiao",
+        "mart_recomendacao_zona_eleitoral",
+        "mart_alocacao_zona_eleitoral",
+        "features_zona_eleitoral",
+        "fact_zona_eleitoral",
+        "fact_secao_eleitoral",
+        "dim_territorio_eleitoral",
     }
 )
 
@@ -80,3 +87,7 @@ def is_allowed_chat_query_template(template_id: str, sql: str | None = None) -> 
     if sql is None:
         return True
     return sql == expected
+
+
+def validate_chat_query_templates_lgpd() -> dict[str, bool]:
+    return {template_id: not sql_references_sensitive_columns(sql) for template_id, sql in CHAT_QUERY_TEMPLATES.items()}

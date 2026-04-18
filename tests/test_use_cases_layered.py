@@ -1,9 +1,8 @@
 import importlib.util
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pandas as pd
-
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "application" / "use_cases_layered.py"
 sys.path.insert(0, str(MODULE_PATH.parents[1]))

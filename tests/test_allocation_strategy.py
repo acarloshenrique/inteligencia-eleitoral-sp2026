@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from config.settings import Settings
-from domain.allocation import calcular_alocacao
+from domain.scoring import calcular_alocacao
 from infrastructure.allocation_engine import build_modular_allocation_scores
 from infrastructure.allocation_strategy import load_allocation_strategy
 

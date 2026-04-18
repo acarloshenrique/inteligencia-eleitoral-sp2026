@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-import shutil
 from typing import Any
 
 import pandas as pd
 
 from domain.lgpd import anonymize_columns, minimize_dataframe
-
 
 PII_CANDIDATE_COLUMNS = {
     "cpf",

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from contextlib import contextmanager
 from datetime import UTC, datetime
-import json
 from pathlib import Path
-import sqlite3
 from typing import Any
+
+from infrastructure.privacy import redact_json_for_log, redact_text
 
 
 class MetadataDb:
@@ -111,7 +113,7 @@ class MetadataDb:
                 INSERT INTO jobs (id, job_type, status, payload_json, result_json, error_text, created_at_utc, updated_at_utc, tenant_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, job_type, "queued", json.dumps(payload, ensure_ascii=False), None, None, now, now, tenant_id),
+                (job_id, job_type, "queued", redact_json_for_log(payload), None, None, now, now, tenant_id),
             )
 
     def set_status(self, job_id: str, status: str) -> None:
@@ -126,7 +128,7 @@ class MetadataDb:
         with self._conn() as conn:
             conn.execute(
                 "UPDATE jobs SET status = ?, result_json = ?, updated_at_utc = ?, latency_ms = COALESCE(?, latency_ms), cost_usd = COALESCE(?, cost_usd) WHERE id = ?",
-                ("finished", json.dumps(result, ensure_ascii=False), now, latency_ms, cost_usd, job_id),
+                ("finished", redact_json_for_log(result), now, latency_ms, cost_usd, job_id),
             )
 
     def set_error(
@@ -136,7 +138,7 @@ class MetadataDb:
         with self._conn() as conn:
             conn.execute(
                 "UPDATE jobs SET status = ?, error_text = ?, updated_at_utc = ?, latency_ms = COALESCE(?, latency_ms), cost_usd = COALESCE(?, cost_usd) WHERE id = ?",
-                ("failed", error_text, now, latency_ms, cost_usd, job_id),
+                ("failed", redact_text(error_text), now, latency_ms, cost_usd, job_id),
             )
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
@@ -210,7 +212,7 @@ class MetadataDb:
         tenant_id: str = "default",
     ) -> None:
         now = datetime.now(UTC).isoformat()
-        payload = json.dumps(metadata or {}, ensure_ascii=False)
+        payload = redact_json_for_log(metadata)
         with self._conn() as conn:
             conn.execute(
                 """
@@ -276,8 +278,8 @@ class MetadataDb:
                     float(latency_ms),
                     float(cost_usd),
                     int(usage_count),
-                    error_text,
-                    json.dumps(metadata or {}, ensure_ascii=False),
+                    redact_text(error_text),
+                    redact_json_for_log(metadata),
                     now,
                 ),
             )
@@ -343,11 +345,11 @@ class MetadataDb:
                     metric,
                     float(value),
                     float(threshold),
-                    message,
+                    redact_text(message),
                     status,
-                    json.dumps(channels or [], ensure_ascii=False),
-                    error_text,
-                    json.dumps(metadata or {}, ensure_ascii=False),
+                    redact_json_for_log(channels or []),
+                    redact_text(error_text),
+                    redact_json_for_log(metadata),
                     now,
                     now,
                 ),
@@ -375,8 +377,8 @@ class MetadataDb:
                 """,
                 (
                     status,
-                    json.dumps(channels, ensure_ascii=False) if channels is not None else None,
-                    error_text,
+                    redact_json_for_log(channels) if channels is not None else None,
+                    redact_text(error_text),
                     now,
                     int(alert_id),
                 ),

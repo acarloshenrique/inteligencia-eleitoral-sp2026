@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-import time
 from typing import Any, Callable, Iterator
 
 from infrastructure.metadata_db import MetadataDb

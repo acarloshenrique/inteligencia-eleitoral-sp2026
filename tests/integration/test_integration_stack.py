@@ -1,5 +1,5 @@
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -103,7 +103,7 @@ def test_integration_storage_registers_gold_mobilizacao_mart():
 
 
 @pytest.mark.integration
-def test_integration_chroma_llm_service_with_fallback(monkeypatch):
+def test_integration_chroma_llm_service_with_fallback(monkeypatch, mock_llm_client):
     with tempfile.TemporaryDirectory() as tmp:
         paths = _paths(tmp)
 
@@ -115,29 +115,8 @@ def test_integration_chroma_llm_service_with_fallback(monkeypatch):
             def query(self, query_embeddings, n_results):
                 return {"metadatas": [[{"municipio": "Cidade A"}, {"municipio": "Cidade B"}]]}
 
-        class _FakeCompletions:
-            def create(self, model, messages, max_tokens=1024, temperature=0.3):
-                class _Usage:
-                    total_tokens = 123
-
-                class _Msg:
-                    content = "Resposta fake"
-
-                class _Choice:
-                    message = _Msg()
-
-                class _Resp:
-                    choices = [_Choice()]
-                    usage = _Usage()
-
-                return _Resp()
-
-        class _FakeLLM:
-            def __init__(self):
-                self.chat = type("Chat", (), {"completions": _FakeCompletions()})()
-
         def _fake_stack(_):
-            return _FakeEmbedder(), _FakeCollection(), _FakeLLM(), True
+            return _FakeEmbedder(), _FakeCollection(), mock_llm_client, True
 
         monkeypatch.setattr("infrastructure.repositories.carrega_stack_ia", _fake_stack)
         svc = ChromaGroqAIService(paths.chromadb_path, app_paths=paths)

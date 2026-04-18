@@ -1,8 +1,7 @@
 import pandas as pd
 import pytest
 
-from domain.allocation import calcular_alocacao
-from domain.constants import CARGOS_EST, PESOS_CLUSTER, TETOS
+from domain.scoring import CARGOS_EST, PESOS_CLUSTER, TETOS, calcular_alocacao
 
 
 def _df_base() -> pd.DataFrame:

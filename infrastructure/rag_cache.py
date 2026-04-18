@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Generic, TypeVar
 
-
 K = TypeVar("K")
 V = TypeVar("V")
 

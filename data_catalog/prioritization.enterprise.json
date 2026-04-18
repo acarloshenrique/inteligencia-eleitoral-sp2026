@@ -1,0 +1,272 @@
+[
+  {
+    "dataset_id": "tse_boletim_urna_secao_bronze",
+    "tier": 1,
+    "prioridade_produto": 100,
+    "score_confiabilidade": 0.97,
+    "status_ingestao": "ingested",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "competicao"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tse_resultados_eleitorais_secao_silver",
+    "tier": 1,
+    "prioridade_produto": 99,
+    "score_confiabilidade": 0.95,
+    "status_ingestao": "ingested",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "competicao",
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "gold_fact_territorio_eleitoral",
+    "tier": 1,
+    "prioridade_produto": 99,
+    "score_confiabilidade": 0.9,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "competicao",
+      "tematica_territorial",
+      "capacidade_operacional",
+      "eficiencia_gasto"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "territorial_auxiliar_crosswalk_gold",
+    "tier": 2,
+    "prioridade_produto": 98,
+    "score_confiabilidade": 0.94,
+    "status_ingestao": "ingested",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "tematica_territorial",
+      "capacidade_operacional",
+      "eficiencia_gasto"
+    ],
+    "impacto_comercial": "high",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "gold_metricas_prioridade_territorial",
+    "tier": 1,
+    "prioridade_produto": 97,
+    "score_confiabilidade": 0.86,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "competicao",
+      "eficiencia_gasto",
+      "tematica_territorial",
+      "capacidade_operacional"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tse_perfil_eleitorado_secao_silver",
+    "tier": 1,
+    "prioridade_produto": 96,
+    "score_confiabilidade": 0.92,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional",
+      "forca_eleitoral"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "gold_recomendacao_alocacao_serving",
+    "tier": 1,
+    "prioridade_produto": 96,
+    "score_confiabilidade": 0.84,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "forca_eleitoral",
+      "competicao",
+      "eficiencia_gasto",
+      "tematica_territorial",
+      "capacidade_operacional",
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tse_eleitorado_local_votacao_silver",
+    "tier": 1,
+    "prioridade_produto": 95,
+    "score_confiabilidade": 0.9,
+    "status_ingestao": "ingested",
+    "capacidades_produto": [
+      "capacidade_operacional",
+      "forca_eleitoral"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tse_cadastro_candidatos_silver",
+    "tier": 1,
+    "prioridade_produto": 93,
+    "score_confiabilidade": 0.93,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tse_prestacao_contas_candidato_silver",
+    "tier": 1,
+    "prioridade_produto": 90,
+    "score_confiabilidade": 0.84,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "eficiencia_gasto",
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "critical",
+    "lacunas_bloqueantes": [
+      "Territorial allocation of expenses may require modeling assumptions.",
+      "Many expenses lack reliable municipal or zone attribution."
+    ]
+  },
+  {
+    "dataset_id": "ibge_malha_setores_censitarios_bronze",
+    "tier": 1,
+    "prioridade_produto": 88,
+    "score_confiabilidade": 0.91,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional"
+    ],
+    "impacto_comercial": "high",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "ibge_censo_2022_agregados_setor_silver",
+    "tier": 1,
+    "prioridade_produto": 87,
+    "score_confiabilidade": 0.88,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional",
+      "competicao"
+    ],
+    "impacto_comercial": "high",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "inep_censo_escolar_municipio_silver",
+    "tier": 2,
+    "prioridade_produto": 74,
+    "score_confiabilidade": 0.86,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "datasus_cnes_municipio_silver",
+    "tier": 2,
+    "prioridade_produto": 72,
+    "score_confiabilidade": 0.84,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "tesouro_siconfi_municipio_silver",
+    "tier": 2,
+    "prioridade_produto": 66,
+    "score_confiabilidade": 0.8,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "capacidade_operacional"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "ssp_sp_criminalidade_municipio_silver",
+    "tier": 2,
+    "prioridade_produto": 64,
+    "score_confiabilidade": 0.78,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "competicao"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "meta_ad_library_campanha_silver",
+    "tier": 3,
+    "prioridade_produto": 58,
+    "score_confiabilidade": 0.62,
+    "status_ingestao": "not_started",
+    "capacidades_produto": [
+      "eficiencia_gasto",
+      "competicao",
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": [
+      "Requires platform access and policy-compliant collection strategy.",
+      "Spend is often a range and territory attribution can be incomplete."
+    ]
+  },
+  {
+    "dataset_id": "tse_redes_sociais_candidatos_silver",
+    "tier": 3,
+    "prioridade_produto": 56,
+    "score_confiabilidade": 0.76,
+    "status_ingestao": "available",
+    "capacidades_produto": [
+      "contexto_candidato"
+    ],
+    "impacto_comercial": "medium",
+    "lacunas_bloqueantes": []
+  },
+  {
+    "dataset_id": "sinais_digitais_competitivos_municipio_silver",
+    "tier": 3,
+    "prioridade_produto": 46,
+    "score_confiabilidade": 0.48,
+    "status_ingestao": "manual_review",
+    "capacidades_produto": [
+      "tematica_territorial",
+      "competicao"
+    ],
+    "impacto_comercial": "low",
+    "lacunas_bloqueantes": [
+      "Needs governance review before commercial use.",
+      "Source sampling and API limits can bias small territories."
+    ]
+  }
+]

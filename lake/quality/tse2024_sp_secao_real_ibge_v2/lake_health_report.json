@@ -1,0 +1,1227 @@
+{
+  "report_version": "lake_health_report_v1",
+  "datasets": [
+    {
+      "dataset_id": "gold_territorial_electoral_master_index",
+      "row_count": 103021,
+      "quality_score": 0.942958,
+      "production_readiness": "production_ready",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['master_record_id', 'ano_eleicao', 'uf', 'cod_municipio_tse', 'zona', 'secao', 'join_confidence', 'source_coverage_score']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['master_record_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['ano_eleicao', 'uf', 'cod_municipio_tse', 'zona', 'secao', 'join_confidence']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.9,
+          "message": "Territorial coverage across ['uf', 'cod_municipio_tse', 'cod_municipio_ibge', 'zona', 'secao']."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "2024-2024",
+          "threshold": "at least one valid year",
+          "message": "Temporal coverage based on election year."
+        },
+        {
+          "check_id": "joinability_confidence",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 0.998357,
+          "observed_value": 0.998357,
+          "threshold": 0.85,
+          "message": "Joinability based on join_confidence."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['join_confidence', 'source_coverage_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found."
+      ],
+      "reliable_joins": [
+        "gold_territorial_electoral_master_index:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:05.158272+00:00"
+    },
+    {
+      "dataset_id": "gold_candidate_context",
+      "row_count": 1,
+      "quality_score": 0.738636,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['candidate_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['candidate_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['candidate_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['territorios_cobertos', 'municipios_cobertos', 'zonas_cobertas', 'source_coverage_avg', 'join_confidence_avg']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_candidate_context:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:05.179266+00:00"
+    },
+    {
+      "dataset_id": "gold_territory_profile",
+      "row_count": 103021,
+      "quality_score": 0.943182,
+      "production_readiness": "production_ready",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['territorio_id', 'ano_eleicao', 'uf']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['territorio_id', 'ano_eleicao', 'uf']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.9,
+          "message": "Territorial coverage across ['uf', 'cod_municipio_tse', 'cod_municipio_ibge', 'zona', 'secao']."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "2024-2024",
+          "threshold": "at least one valid year",
+          "message": "Temporal coverage based on election year."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['cod_municipio_tse', 'cod_municipio_ibge', 'territorio_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['ano_eleicao', 'secoes', 'locais_votacao', 'candidatos', 'cd_setor_count', 'join_confidence_avg', 'source_coverage_avg', 'data_quality_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found."
+      ],
+      "reliable_joins": [
+        "gold_territory_profile:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:06.072952+00:00"
+    },
+    {
+      "dataset_id": "gold_electoral_base_strength",
+      "row_count": 103021,
+      "quality_score": 0.942958,
+      "production_readiness": "production_ready",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['candidate_id', 'territorio_id', 'ano_eleicao', 'uf']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id', 'territorio_id', 'ano_eleicao', 'uf']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.9,
+          "message": "Territorial coverage across ['uf', 'cod_municipio_tse', 'zona', 'secao']."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "2024-2024",
+          "threshold": "at least one valid year",
+          "message": "Temporal coverage based on election year."
+        },
+        {
+          "check_id": "joinability_confidence",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 0.998357,
+          "observed_value": 0.998357,
+          "threshold": 0.85,
+          "message": "Joinability based on join_confidence."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['ano_eleicao', 'votos_nominais', 'total_aptos', 'source_coverage_score', 'join_confidence', 'base_strength_score', 'retention_score', 'expansion_signal']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found."
+      ],
+      "reliable_joins": [
+        "gold_electoral_base_strength:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:06.877343+00:00"
+    },
+    {
+      "dataset_id": "gold_competition_landscape",
+      "row_count": 103021,
+      "quality_score": 0.738636,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['territorio_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['territorio_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['territorio_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['candidate_count', 'leader_margin_score', 'competition_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_competition_landscape:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:06.981087+00:00"
+    },
+    {
+      "dataset_id": "gold_campaign_finance_efficiency",
+      "row_count": 1,
+      "quality_score": 0.738636,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['candidate_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['candidate_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['candidate_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['votos_nominais', 'receita_total', 'despesa_total', 'custo_por_voto_estimado', 'finance_efficiency_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_campaign_finance_efficiency:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:06.987610+00:00"
+    },
+    {
+      "dataset_id": "gold_thematic_affinity",
+      "row_count": 103021,
+      "quality_score": 0.738636,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['territorio_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['territorio_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['territorio_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['thematic_affinity_score', 'theme_evidence_count']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_thematic_affinity:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:07.086270+00:00"
+    },
+    {
+      "dataset_id": "gold_priority_score",
+      "row_count": 103021,
+      "quality_score": 0.949803,
+      "production_readiness": "production_ready",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['candidate_id', 'territorio_id', 'score_prioridade_final']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id', 'territorio_id', 'score_prioridade_final']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.9,
+          "message": "Territorial coverage across ['uf', 'cod_municipio_tse', 'zona', 'secao']."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "2024-2024",
+          "threshold": "at least one valid year",
+          "message": "Temporal coverage based on election year."
+        },
+        {
+          "check_id": "joinability_confidence",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 0.998357,
+          "observed_value": 0.998357,
+          "threshold": 0.85,
+          "message": "Joinability based on join_confidence."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['score_prioridade_final', 'base_strength_score', 'competition_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        },
+        {
+          "check_id": "referential_integrity",
+          "dimension": "referential_integrity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Referential integrity on keys: ['territorio_id']."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found."
+      ],
+      "reliable_joins": [
+        "gold_priority_score:joinability",
+        "gold_priority_score->gold_territory_profile:territorio_id"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:07.632249+00:00"
+    },
+    {
+      "dataset_id": "gold_allocation_inputs",
+      "row_count": 103021,
+      "quality_score": 0.738412,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_confidence",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 0.998357,
+          "observed_value": 0.998357,
+          "threshold": 0.85,
+          "message": "Joinability based on join_confidence."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['score_prioridade_final', 'allocation_weight', 'data_quality_score', 'join_confidence']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_allocation_inputs:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:07.804642+00:00"
+    },
+    {
+      "dataset_id": "gold_allocation_recommendations",
+      "row_count": 103021,
+      "quality_score": 0.77,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['scenario_id', 'candidate_id', 'territorio_id', 'recurso_sugerido']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['scenario_id', 'candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['candidate_id', 'territorio_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['recurso_sugerido', 'percentual_orcamento_sugerido', 'score_prioridade_final']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        },
+        {
+          "check_id": "referential_integrity",
+          "dimension": "referential_integrity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Referential integrity on keys: ['candidate_id', 'territorio_id']."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_allocation_recommendations:joinability",
+        "gold_allocation_recommendations->gold_priority_score:candidate_id,territorio_id"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:08.395088+00:00"
+    },
+    {
+      "dataset_id": "gold_territorial_clusters",
+      "row_count": 779,
+      "quality_score": 0.602273,
+      "production_readiness": "not_ready",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['territorial_cluster_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['territorial_cluster_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['territorial_cluster_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No joinability keys available."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['territorios', 'priority_avg', 'secoes', 'locais_votacao']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found.",
+        "No joinability keys available."
+      ],
+      "reliable_joins": [],
+      "generated_at_utc": "2026-04-18T15:07:08.423181+00:00"
+    },
+    {
+      "dataset_id": "gold_candidate_comparisons",
+      "row_count": 103021,
+      "quality_score": 0.738636,
+      "production_readiness": "limited_use",
+      "checks": [
+        {
+          "check_id": "completeness_required_columns",
+          "dimension": "completeness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.95,
+          "message": "Completeness across required columns: ['territorio_id']."
+        },
+        {
+          "check_id": "uniqueness_primary_key",
+          "dimension": "uniqueness",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Uniqueness on primary key: ['territorio_id']."
+        },
+        {
+          "check_id": "validity_keys",
+          "dimension": "validity",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.98,
+          "message": "Validity for key columns: ['territorio_id']."
+        },
+        {
+          "check_id": "freshness_metadata",
+          "dimension": "freshness",
+          "status": "warn",
+          "score": 0.5,
+          "observed_value": "missing_timestamp",
+          "threshold": 30,
+          "message": "Freshness timestamp not found."
+        },
+        {
+          "check_id": "territorial_coverage",
+          "dimension": "territorial_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No territorial coverage columns found."
+        },
+        {
+          "check_id": "temporal_coverage",
+          "dimension": "temporal_coverage",
+          "status": "fail",
+          "score": 0.0,
+          "observed_value": null,
+          "threshold": null,
+          "message": "No temporal coverage column found."
+        },
+        {
+          "check_id": "joinability_keys",
+          "dimension": "joinability",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 0.85,
+          "message": "Joinability based on keys: ['territorio_id']."
+        },
+        {
+          "check_id": "distribution_numeric",
+          "dimension": "distribution",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": 1.0,
+          "threshold": 1.0,
+          "message": "Distribution sanity for numeric columns: ['leader_margin_score', 'candidate_count', 'avg_priority_score']."
+        },
+        {
+          "check_id": "drift_numeric_mean",
+          "dimension": "drift",
+          "status": "pass",
+          "score": 1.0,
+          "observed_value": "baseline_missing",
+          "threshold": 0.2,
+          "message": "No previous baseline available; drift check passes as initial run."
+        }
+      ],
+      "limitations": [
+        "Freshness timestamp not found.",
+        "No territorial coverage columns found.",
+        "No temporal coverage column found."
+      ],
+      "reliable_joins": [
+        "gold_candidate_comparisons:joinability"
+      ],
+      "generated_at_utc": "2026-04-18T15:07:09.181814+00:00"
+    }
+  ],
+  "aggregate_quality_score": 0.798564,
+  "production_ready_datasets": [
+    "gold_territorial_electoral_master_index",
+    "gold_territory_profile",
+    "gold_electoral_base_strength",
+    "gold_priority_score"
+  ],
+  "limited_datasets": [
+    "gold_candidate_context",
+    "gold_competition_landscape",
+    "gold_campaign_finance_efficiency",
+    "gold_thematic_affinity",
+    "gold_allocation_inputs",
+    "gold_allocation_recommendations",
+    "gold_candidate_comparisons"
+  ],
+  "not_ready_datasets": [
+    "gold_territorial_clusters"
+  ],
+  "trusted_joins": [
+    "gold_allocation_inputs:joinability",
+    "gold_allocation_recommendations->gold_priority_score:candidate_id,territorio_id",
+    "gold_allocation_recommendations:joinability",
+    "gold_campaign_finance_efficiency:joinability",
+    "gold_candidate_comparisons:joinability",
+    "gold_candidate_context:joinability",
+    "gold_competition_landscape:joinability",
+    "gold_electoral_base_strength:joinability",
+    "gold_priority_score->gold_territory_profile:territorio_id",
+    "gold_priority_score:joinability",
+    "gold_territorial_electoral_master_index:joinability",
+    "gold_territory_profile:joinability",
+    "gold_thematic_affinity:joinability"
+  ],
+  "generated_at_utc": "2026-04-18T15:07:09.181814+00:00"
+}

@@ -25,6 +25,16 @@ class _FakeStreamlit:
     def set_page_config(self, **kwargs):
         return None
 
+    def markdown(self, *args, **kwargs):
+        return None
+
+    def columns(self, count):
+        size = count if isinstance(count, int) else len(count)
+        return tuple(self for _ in range(size))
+
+    def metric(self, *args, **kwargs):
+        return None
+
     def error(self, msg):
         self.errors.append(str(msg))
 
@@ -82,11 +92,15 @@ def test_e2e_generate_allocation_happy_path(monkeypatch):
         "executar_alocacao",
         lambda *_: pd.DataFrame([{"budget": 100000, "cluster": "Diamante", "municipio": "Cidade A"}]),
     )
-    monkeypatch.setattr(app_main, "render_tab_prioridade_territorial", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_midia_performance", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_mensagem", lambda *_: None)
-    monkeypatch.setattr(app_main, "render_tab_simulacao", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_candidate_onboarding", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_electoral_base_map", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_territorial_ranking", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_budget_simulator", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_recommendation_detail", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_evidence_and_explanations", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_data_catalog", lambda *_: None)
     monkeypatch.setattr(app_main, "render_tab_monitoramento", lambda *_: None)
+    monkeypatch.setattr(app_main, "render_tab_chat", lambda *_: None)
 
     app_main.run_app()
     assert "aloc" in st.session_state

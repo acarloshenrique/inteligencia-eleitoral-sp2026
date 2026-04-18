@@ -91,3 +91,41 @@ def test_carrega_db_registers_municipios_without_streamlit(tmp_path):
 
     assert tem_tabela(db, "municipios") is True
     assert db.execute("select count(*) as total from municipios").fetchone()[0] == 1
+
+
+def test_carrega_dados_returns_demo_frame_when_gold_is_absent_in_dev(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from infrastructure import storage
+
+    storage.clear_storage_cache()
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(storage, "get_settings", lambda: SimpleNamespace(app_env="dev", require_data=False))
+
+    loaded = storage.carrega_dados(paths)
+
+    assert not loaded.empty
+    assert {"ranking_final", "municipio", "cluster", "indice_final"}.issubset(loaded.columns)
+
+
+def test_build_demo_zone_tables_adds_governed_zone_metadata():
+    from infrastructure.storage import build_demo_zone_tables
+
+    df = pd.DataFrame(
+        [
+            {
+                "ranking_final": 1,
+                "municipio": "Cidade A",
+                "cluster": "Diamante",
+                "indice_final": 90.0,
+                "pop_censo2022": 100000,
+            }
+        ]
+    )
+
+    tables = build_demo_zone_tables(df)
+
+    assert {"dim_territorio_eleitoral", "fact_zona_eleitoral", "features_zona_eleitoral"}.issubset(tables)
+    fact = tables["fact_zona_eleitoral"]
+    assert {"territorio_id", "zona_eleitoral", "data_quality_score", "join_confidence"}.issubset(fact.columns)
+    assert len(fact) == 3

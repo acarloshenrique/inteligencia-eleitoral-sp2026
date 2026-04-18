@@ -98,6 +98,9 @@ def validate_prod_runtime_hardening(settings, paths: AppPaths) -> list[str]:
     if settings.require_redis_auth_in_prod and not redis_has_auth:
         erros.append("APP_ENV=prod exige Redis com senha em REDIS_URL.")
 
+    if bool(getattr(settings, "api_rate_limit_enabled", True)) and settings.api_rate_limit_backend != "redis":
+        erros.append("APP_ENV=prod exige API_RATE_LIMIT_BACKEND=redis para rate limiting distribuido.")
+
     backend = str(settings.chroma_vector_backend).lower()
     if backend == "local" and not settings.chroma_allow_shared_volume:
         if paths.tenant_id == "default":

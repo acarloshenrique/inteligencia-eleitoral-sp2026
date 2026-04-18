@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import zipfile
 from datetime import datetime
 from io import BytesIO
 from typing import Mapping
 from xml.sax.saxutils import escape
-import zipfile
 
 import pandas as pd
 

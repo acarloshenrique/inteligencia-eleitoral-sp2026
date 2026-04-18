@@ -1,0 +1,83 @@
+{
+  "tenant_id": "default",
+  "campaign_id": "campanha_sp_2026",
+  "snapshot_id": "tse2024_sp_secao_real_ibge_v2",
+  "dataset_version": "tse2024_sp_secao_real_ibge_v2",
+  "generated_at_utc": "2026-04-18T15:07:13.741057+00:00",
+  "outputs": {
+    "serving_territory_ranking": {
+      "parquet": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_territory_ranking\\serving_territory_ranking.parquet",
+      "csv": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_territory_ranking\\serving_territory_ranking.csv",
+      "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_territory_ranking\\serving_territory_ranking.json"
+    },
+    "serving_allocation_recommendations": {
+      "parquet": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_allocation_recommendations\\data.parquet",
+      "csv": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_allocation_recommendations\\data.csv",
+      "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_allocation_recommendations\\data.json"
+    },
+    "serving_data_readiness": {
+      "parquet": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_data_readiness\\serving_data_readiness.parquet",
+      "csv": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_data_readiness\\serving_data_readiness.csv",
+      "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_data_readiness\\serving_data_readiness.json"
+    },
+    "_specs": {
+      "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=tse2024_sp_secao_real_ibge_v2\\serving_output_specs.json"
+    }
+  },
+  "row_counts": {
+    "serving_territory_ranking": 103021,
+    "serving_allocation_recommendations": 103021,
+    "serving_data_readiness": 1
+  },
+  "quality": {
+    "serving_territory_ranking": {
+      "rows": 103021,
+      "columns": 19,
+      "empty": false,
+      "score_prioridade_final_min": 0.51875,
+      "score_prioridade_final_max": 0.625,
+      "score_prioridade_final_nulls": 0,
+      "confidence_score_min": 0.389688,
+      "confidence_score_max": 0.75625,
+      "confidence_score_nulls": 0
+    },
+    "serving_allocation_recommendations": {
+      "rows": 103021,
+      "columns": 20,
+      "empty": false,
+      "score_prioridade_final_min": 0.51875,
+      "score_prioridade_final_max": 0.625,
+      "score_prioridade_final_nulls": 0,
+      "confidence_score_min": 0.582187,
+      "confidence_score_max": 0.65125,
+      "confidence_score_nulls": 0
+    },
+    "serving_data_readiness": {
+      "rows": 1,
+      "columns": 12,
+      "empty": false,
+      "readiness_score_min": 0.969374,
+      "readiness_score_max": 0.969374,
+      "readiness_score_nulls": 0,
+      "avg_join_confidence_min": 0.998357,
+      "avg_join_confidence_max": 0.998357,
+      "avg_join_confidence_nulls": 0
+    }
+  },
+  "source_tables": [
+    "gold_allocation_inputs",
+    "gold_allocation_recommendations",
+    "gold_campaign_finance_efficiency",
+    "gold_candidate_comparisons",
+    "gold_candidate_context",
+    "gold_competition_landscape",
+    "gold_electoral_base_strength",
+    "gold_priority_score",
+    "gold_territorial_clusters",
+    "gold_territorial_electoral_master_index",
+    "gold_territory_profile",
+    "gold_thematic_affinity",
+    "lake_health_report"
+  ],
+  "warnings": []
+}

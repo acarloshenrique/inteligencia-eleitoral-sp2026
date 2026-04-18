@@ -5,7 +5,6 @@ from typing import Iterable
 
 import pandas as pd
 
-
 DEFAULT_ALLOWED_COLUMNS = [
     "ranking_final",
     "municipio",

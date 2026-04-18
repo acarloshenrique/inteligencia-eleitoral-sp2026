@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
+import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import json
 from pathlib import Path
-import shutil
 from typing import Any
 
 import pandas as pd
@@ -14,6 +14,7 @@ from infrastructure.load_manifest import build_load_manifest
 from infrastructure.medallion_pipeline import MedallionInputs, run_medallion_pipeline
 from infrastructure.open_data_pipeline import OpenDataInputs, run_open_data_crosswalk_pipeline
 from infrastructure.open_data_sources import OpenDataAsset, download_asset_incremental
+from infrastructure.tse_zone_pipeline import TSEZoneInputs, run_tse_zone_section_pipeline
 
 
 class AutomatedIngestionError(RuntimeError):
@@ -40,6 +41,8 @@ ROLE_DOMAIN_DEFAULTS = {
     "google_ads_csv": "midia_e_social",
     "operacoes_csv": "operacoes_de_campanha",
     "fiscal_csv": "operacoes_de_campanha",
+    "tse_resultados_zona_csv": "eleitoral_oficial",
+    "tse_eleitorado_zona_csv": "eleitoral_oficial",
 }
 
 
@@ -101,8 +104,8 @@ def _load_catalog(catalog_path: Path) -> IngestionCatalog:
     if not assets:
         raise AutomatedIngestionError("catalogo de ingestao sem assets")
     pipeline = str(payload.get("pipeline", "")).strip().lower()
-    if pipeline not in {"open_data", "medallion"}:
-        raise AutomatedIngestionError("pipeline do catalogo deve ser 'open_data' ou 'medallion'")
+    if pipeline not in {"open_data", "medallion", "tse_zone_section"}:
+        raise AutomatedIngestionError("pipeline do catalogo deve ser 'open_data', 'medallion' ou 'tse_zone_section'")
     return IngestionCatalog(
         pipeline=pipeline,
         pipeline_version=str(payload.get("pipeline_version", f"{pipeline}_v1")),
@@ -259,6 +262,18 @@ def run_automated_ingestion(
                 base_parquet_path=_require_path(role_paths, "base_parquet"),
                 mapping_csv_path=_require_path(role_paths, "mapping_csv"),
                 socio_csv_path=role_paths.get("socio_csv"),
+            ),
+            pipeline_version=selected_version,
+        )
+    elif selected_pipeline == "tse_zone_section":
+        pipeline_result = run_tse_zone_section_pipeline(
+            paths=paths,
+            inputs=TSEZoneInputs(
+                eleitorado_path=_require_path(role_paths, "tse_eleitorado_zona_csv"),
+                resultados_path=role_paths.get("tse_resultados_zona_csv"),
+                uf=str(getattr(paths, "uf", "SP")),
+                ano_eleicao=int(2024),
+                turno=int(1),
             ),
             pipeline_version=selected_version,
         )

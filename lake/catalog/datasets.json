@@ -1,0 +1,322 @@
+{
+  "version": "electoral_lakehouse_catalog_v1",
+  "owner": "data_platform",
+  "datasets": [
+    {
+      "dataset_id": "raw_tse_resultados_secao_boletim_urna",
+      "layer": "bronze",
+      "owner": "data_platform",
+      "entity": "electoral_result",
+      "fact_or_dimension": "source_snapshot",
+      "business_description": "Arquivo bruto oficial do TSE preservado como evidencia de votos por secao/boletim de urna.",
+      "source_name": "tse_resultados_secao_boletim_urna",
+      "source_url": "https://dadosabertos.tse.jus.br/",
+      "schema_version": "v1",
+      "dataset_version": "v1",
+      "granularity": "ano_eleicao + uf + municipio_tse + zona + secao + cargo + candidato",
+      "primary_key": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO"
+      ],
+      "schema": {
+        "ANO_ELEICAO": "int64",
+        "SIGLA_UF": "string",
+        "COD_MUN_TSE": "string",
+        "ZONA": "int64",
+        "SECAO": "int64"
+      },
+      "required_columns": [
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO"
+      ],
+      "partition_policy": {
+        "columns": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "description": "Particionar por ano eleitoral e UF para reprocessamento incremental por eleicao/estado."
+      },
+      "incremental_strategy": "append",
+      "coverage": {
+        "territorio": "Brasil",
+        "periodicidade": "eleitoral"
+      },
+      "quality_rules": [
+        "hash do arquivo original obrigatorio",
+        "schema minimo TSE detectado",
+        "sem transformacao destrutiva"
+      ],
+      "lineage_inputs": [],
+      "lgpd_classification": "public_open_data_aggregated",
+      "business_documentation": "Fonte primaria para base eleitoral, abstencao, ranking de secao e volatilidade historica."
+    },
+    {
+      "dataset_id": "silver_tse_resultados_secao",
+      "layer": "silver",
+      "owner": "data_platform",
+      "entity": "electoral_result",
+      "fact_or_dimension": "fact",
+      "business_description": "Resultado eleitoral limpo, tipado, deduplicado e harmonizado nas chaves territoriais canonicas.",
+      "source_name": "tse_resultados_secao_boletim_urna",
+      "source_url": "https://dadosabertos.tse.jus.br/",
+      "schema_version": "v1",
+      "dataset_version": "v1",
+      "granularity": "ano_eleicao + turno + uf + municipio_tse + zona + secao + candidato",
+      "primary_key": [
+        "ANO_ELEICAO",
+        "TURNO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "ID_CANDIDATO"
+      ],
+      "schema": {
+        "ANO_ELEICAO": "int64",
+        "TURNO": "int64",
+        "SIGLA_UF": "string",
+        "COD_MUN_TSE": "string",
+        "COD_MUN_IBGE": "string",
+        "MUNICIPIO": "string",
+        "ZONA": "int64",
+        "SECAO": "int64",
+        "ID_CANDIDATO": "string",
+        "VOTOS_NOMINAIS": "int64",
+        "join_confidence": "float64",
+        "data_quality_score": "float64",
+        "source_hash_sha256": "string",
+        "ingested_at_utc": "string"
+      },
+      "required_columns": [
+        "ANO_ELEICAO",
+        "TURNO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "ZONA",
+        "SECAO",
+        "ID_CANDIDATO",
+        "VOTOS_NOMINAIS",
+        "join_confidence",
+        "data_quality_score"
+      ],
+      "partition_policy": {
+        "columns": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "description": "Carga incremental por eleicao/UF."
+      },
+      "incremental_strategy": "upsert_by_key",
+      "coverage": {
+        "territorio": "Brasil",
+        "nivel": "secao"
+      },
+      "quality_rules": [
+        "primary_key unica",
+        "join_confidence entre 0 e 1",
+        "data_quality_score entre 0 e 1"
+      ],
+      "lineage_inputs": [
+        "raw_tse_resultados_secao_boletim_urna"
+      ],
+      "lgpd_classification": "public_open_data_aggregated",
+      "business_documentation": "Base silver para granularidade maxima de secao, preservando origem e qualidade de join."
+    },
+    {
+      "dataset_id": "gold_fact_territorio_eleitoral",
+      "layer": "gold",
+      "owner": "analytics_engineering",
+      "entity": "territory",
+      "fact_or_dimension": "fact",
+      "business_description": "Tabela analitica consolidada por territorio eleitoral para scoring, recomendacao e dashboards.",
+      "source_name": "lakehouse_consolidation",
+      "source_url": "",
+      "schema_version": "v1",
+      "dataset_version": "v1",
+      "granularity": "ano_eleicao + uf + municipio_tse + zona + secao/local_votacao/setor quando disponivel",
+      "primary_key": [
+        "territorio_id"
+      ],
+      "schema": {
+        "territorio_id": "string",
+        "ANO_ELEICAO": "int64",
+        "SIGLA_UF": "string",
+        "COD_MUN_TSE": "string",
+        "COD_MUN_IBGE": "string",
+        "MUNICIPIO": "string",
+        "ZONA": "int64",
+        "SECAO": "int64",
+        "LOCAL_VOTACAO": "string",
+        "CD_SETOR": "string",
+        "eleitores_aptos": "int64",
+        "votos_validos": "int64",
+        "abstencao_pct": "float64",
+        "competitividade": "float64",
+        "join_confidence": "float64",
+        "data_quality_score": "float64"
+      },
+      "required_columns": [
+        "territorio_id",
+        "ANO_ELEICAO",
+        "SIGLA_UF",
+        "COD_MUN_TSE",
+        "MUNICIPIO",
+        "join_confidence",
+        "data_quality_score"
+      ],
+      "partition_policy": {
+        "columns": [
+          "ANO_ELEICAO",
+          "SIGLA_UF"
+        ],
+        "description": "Reprocessamento por ciclo eleitoral e UF."
+      },
+      "incremental_strategy": "merge_by_partition",
+      "coverage": {
+        "territorio": "SP prioritario; Brasil extensivel",
+        "nivel": "secao/zona/local/setor"
+      },
+      "quality_rules": [
+        "territorio_id unico",
+        "documentar joins exatos e aproximados",
+        "coverage territorial calculada"
+      ],
+      "lineage_inputs": [
+        "silver_tse_resultados_secao",
+        "silver_tse_eleitorado_local_votacao",
+        "silver_ibge_setores"
+      ],
+      "lgpd_classification": "public_open_data_aggregated",
+      "business_documentation": "Camada de consumo para motores de score, contexto de candidato e priorizacao territorial."
+    },
+    {
+      "dataset_id": "semantic_metricas_prioridade_territorial",
+      "layer": "semantic",
+      "owner": "analytics_product",
+      "entity": "score",
+      "fact_or_dimension": "metric_view",
+      "business_description": "Visao canonica de metricas e scores usados pelo produto para decisao de alocacao.",
+      "source_name": "scoring_engine",
+      "source_url": "",
+      "schema_version": "v1",
+      "dataset_version": "v1",
+      "granularity": "territorio_id + candidate_id + scenario + score_version",
+      "primary_key": [
+        "territorio_id",
+        "candidate_id",
+        "scenario",
+        "score_version"
+      ],
+      "schema": {
+        "territorio_id": "string",
+        "candidate_id": "string",
+        "scenario": "string",
+        "score_version": "string",
+        "base_eleitoral_score": "float64",
+        "afinidade_tematica_score": "float64",
+        "potencial_expansao_score": "float64",
+        "custo_eficiencia_score": "float64",
+        "concorrencia_score": "float64",
+        "score_prioridade_final": "float64",
+        "confidence_score": "float64"
+      },
+      "required_columns": [
+        "territorio_id",
+        "candidate_id",
+        "scenario",
+        "score_version",
+        "score_prioridade_final",
+        "confidence_score"
+      ],
+      "partition_policy": {
+        "columns": [
+          "scenario",
+          "score_version"
+        ],
+        "description": "Versionar metricas por estrategia e pesos."
+      },
+      "incremental_strategy": "upsert_by_key",
+      "coverage": {
+        "produto": "ranking, simulacao, explicabilidade"
+      },
+      "quality_rules": [
+        "scores entre 0 e 1",
+        "confidence_score entre 0 e 1",
+        "score_version obrigatoria"
+      ],
+      "lineage_inputs": [
+        "gold_fact_territorio_eleitoral",
+        "candidate_context"
+      ],
+      "lgpd_classification": "derived_aggregate",
+      "business_documentation": "Contrato semantico para API/UI: nomes estaveis de metricas e definicoes de negocio."
+    },
+    {
+      "dataset_id": "serving_recomendacao_alocacao",
+      "layer": "serving",
+      "owner": "product_engineering",
+      "entity": "allocation_recommendation",
+      "fact_or_dimension": "serving_output",
+      "business_description": "Output pronto para API, UI e recommendation engine com verba sugerida e justificativa auditavel.",
+      "source_name": "allocation_engine",
+      "source_url": "",
+      "schema_version": "v1",
+      "dataset_version": "v1",
+      "granularity": "candidate_id + territorio_id + scenario + generated_at_utc",
+      "primary_key": [
+        "candidate_id",
+        "territorio_id",
+        "scenario",
+        "generated_at_utc"
+      ],
+      "schema": {
+        "candidate_id": "string",
+        "territorio_id": "string",
+        "scenario": "string",
+        "generated_at_utc": "string",
+        "tipo_recomendacao": "string",
+        "score_prioridade": "float64",
+        "recurso_sugerido": "float64",
+        "percentual_orcamento_sugerido": "float64",
+        "justificativa": "string",
+        "confidence_score": "float64",
+        "evidence_ids": "string"
+      },
+      "required_columns": [
+        "candidate_id",
+        "territorio_id",
+        "scenario",
+        "generated_at_utc",
+        "score_prioridade",
+        "recurso_sugerido",
+        "confidence_score"
+      ],
+      "partition_policy": {
+        "columns": [
+          "scenario"
+        ],
+        "description": "Servir cenarios conservador/hibrido/agressivo separadamente."
+      },
+      "incremental_strategy": "append",
+      "coverage": {
+        "produto": "API/UI/recommendation"
+      },
+      "quality_rules": [
+        "evidencias obrigatorias",
+        "sem dados pessoais de eleitores",
+        "justificativa nao vazia"
+      ],
+      "lineage_inputs": [
+        "semantic_metricas_prioridade_territorial"
+      ],
+      "lgpd_classification": "campaign_operational_confidential",
+      "business_documentation": "Tabela final vendavel: ranking, verba, canal/mensagem e explicacao para cliente."
+    }
+  ]
+}

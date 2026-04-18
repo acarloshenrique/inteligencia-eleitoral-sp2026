@@ -7,8 +7,13 @@ import pandas as pd
 
 from config.settings import AppPaths, Settings, get_settings
 from infrastructure.env import bootstrap_ambiente, build_paths
-from infrastructure.repositories import ChromaGroqAIService, DuckDBAnalyticsRepository, ParquetReportStore
-from infrastructure.storage import carrega_dados, carrega_db
+from infrastructure.repositories import (
+    ChromaGroqAIService,
+    DuckDBAnalyticsRepository,
+    PandasAnalyticsRepository,
+    ParquetReportStore,
+)
+from infrastructure.storage import build_pandas_repository_tables, carrega_dados, carrega_db
 
 
 @dataclass(frozen=True)
@@ -22,7 +27,7 @@ class AppEnvironment:
 class AppRuntime:
     environment: AppEnvironment
     df_mun: pd.DataFrame
-    repository: DuckDBAnalyticsRepository
+    repository: DuckDBAnalyticsRepository | PandasAnalyticsRepository
     report_store: ParquetReportStore
     ai_service: ChromaGroqAIService
 
@@ -46,8 +51,13 @@ def build_app_runtime(environment: AppEnvironment | None = None) -> AppRuntime:
     env = environment or initialize_app_environment()
     paths = env.paths
     df_mun = carrega_dados(paths)
-    db = carrega_db(paths, df_mun)
-    repository = DuckDBAnalyticsRepository(db)
+    try:
+        db = carrega_db(paths, df_mun)
+        repository = DuckDBAnalyticsRepository(db)
+    except ModuleNotFoundError as exc:
+        if exc.name != "duckdb":
+            raise
+        repository = PandasAnalyticsRepository(build_pandas_repository_tables(paths, df_mun))
     report_store = ParquetReportStore(paths)
     ai_service = ChromaGroqAIService(paths.chromadb_path, app_paths=paths)
     return AppRuntime(

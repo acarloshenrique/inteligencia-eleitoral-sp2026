@@ -105,3 +105,27 @@ def test_api_lifespan_fails_fast_on_prod_hardening_errors(monkeypatch):
 
     with pytest.raises(RuntimeError, match="weak secret"):
         asyncio.run(_run_lifespan())
+
+
+def test_api_lifespan_fails_fast_when_rate_limit_uses_memory_in_prod(monkeypatch):
+    from infrastructure.env import validate_prod_runtime_hardening
+
+    class _Settings:
+        app_env = "prod"
+        redis_url = "rediss://:strong-password@redis:6379/0"
+        require_redis_tls_in_prod = True
+        require_redis_auth_in_prod = True
+        api_rate_limit_enabled = True
+        api_rate_limit_backend = "memory"
+        chroma_vector_backend = "external"
+        chroma_allow_shared_volume = False
+        lgpd_anonymization_salt = "strong-salt"
+        artifact_backend = "local"
+        secret_backend = "env"
+        ops_alert_email_enabled = False
+
+    paths = type("_Paths", (), {"tenant_id": "cliente-a", "tenant_root": None, "chromadb_path": None})()
+
+    errors = validate_prod_runtime_hardening(_Settings(), paths)
+
+    assert any("API_RATE_LIMIT_BACKEND=redis" in error for error in errors)

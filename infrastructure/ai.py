@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import streamlit as st
 
@@ -6,32 +7,6 @@ from config.settings import get_settings
 from infrastructure.secret_factory import build_secret_provider
 
 logger = logging.getLogger(__name__)
-
-
-class MockCompletions:
-    def create(self, model, messages, max_tokens=512, temperature=0.3):
-        from unittest.mock import MagicMock
-
-        p = messages[-1]["content"].lower()
-        if "budget" in p or "alocar" in p:
-            t = "Recomendo concentrar o investimento nos municípios Diamante, com foco em eventos presenciais e Meta FB+IG para maximizar o retorno eleitoral."
-        elif "diamante" in p or "cluster" in p:
-            t = "Municípios Diamante combinam score territorial >70 e VS >70 — histórico favorável e alta receptividade social. São a prioridade máxima de investimento."
-        elif "seção" in p or "campo" in p:
-            t = "As seções de Alta prioridade têm maior volume de votos e alto engajamento nominal. Concentre eventos e distribuição de material nessas seções."
-        elif "ranking" in p or "priorit" in p:
-            t = "Cássia dos Coqueiros lidera (índice 94.5), seguida por Dirce Reis (88.8) e Cândido Rodrigues (85.8). Todos no cluster Diamante."
-        else:
-            t = "Posso analisar ranking de municípios, clusters táticos, alocação de budget, estratégia de mídia e priorização de seções eleitorais para SP 2026."
-        r = MagicMock()
-        r.choices[0].message.content = t
-        r.usage.total_tokens = len(t.split()) * 2
-        return r
-
-
-class MockLLMClient:
-    def __init__(self):
-        self.chat = type("Chat", (), {"completions": MockCompletions()})()
 
 
 @st.cache_resource(show_spinner="Carregando embedder...")
@@ -54,12 +29,12 @@ def carrega_chroma(chromadb_path):
             if col.count() >= 600:
                 return col
         except Exception as e:
-            logger.warning("Falha ao carregar coleção ChromaDB '%s': %s", nome, e)
+            logger.warning("Falha ao carregar colecao ChromaDB '%s': %s", nome, e)
     return None
 
 
 @st.cache_resource(show_spinner="Conectando LLM...")
-def carrega_llm():
+def carrega_llm() -> tuple[Any | None, bool]:
     settings = get_settings()
     key = build_secret_provider(settings).get_secret("GROQ_API_KEY") or settings.groq_api_key
     if key:
@@ -74,8 +49,8 @@ def carrega_llm():
             )
             return c, True
         except Exception as e:
-            logger.warning("Falha ao conectar no provider LLM real; usando fallback simulado. Motivo: %s", e)
-    return MockLLMClient(), False
+            logger.warning("Falha ao conectar no provider LLM real; modo degradado ativo. Motivo: %s", e)
+    return None, False
 
 
 @st.cache_resource(show_spinner=False)
