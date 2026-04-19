@@ -32,8 +32,8 @@ def choose_action(row: pd.Series, *, scenario: Scenario | None = None) -> Action
 
 
 def build_justification(row: pd.Series, *, scenario: Scenario | None = None) -> str:
-    municipio = str(row.get("municipio") or row.get("MUNICIPIO") or "territorio")
-    zona = row.get("zona_eleitoral", row.get("ZONA", ""))
+    municipio = str(row.get("municipio") or row.get("municipio_nome") or row.get("MUNICIPIO") or "territorio")
+    zona = row.get("zona_eleitoral", row.get("zona", row.get("ZONA", "")))
     action = str(row.get("tipo_recomendacao") or choose_action(row, scenario=scenario))
     cluster = str(row.get("cluster_territorial") or cluster_territory(row))
     scenario_name = scenario.name if scenario is not None else str(row.get("cenario", "hibrido"))

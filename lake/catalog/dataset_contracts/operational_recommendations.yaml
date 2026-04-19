@@ -1,0 +1,80 @@
+contracts:
+  - dataset_id: serving_operational_recommendations
+    layer: serving
+    owner: analytics_product
+    entity: recomendacao_operacional
+    fact_or_dimension: serving_output
+    business_description: "Recomendacoes operacionais por cenario, tipo de acao e territorio agregado para orientar alocacao de campanha."
+    source_name: "gold_calibrated_priority_scores + allocation.scenario_builder + allocation.budget_allocator"
+    granularity: "dataset_version + scenario_id + score_granularity + territorio_id"
+    primary_key:
+      - scenario_id
+      - territorio_id
+      - score_granularity
+    required_columns:
+      - scenario_id
+      - territorio_id
+      - score_granularity
+      - score_prioridade_final
+      - tipo_recomendacao
+      - recurso_sugerido
+      - percentual_orcamento_sugerido
+      - action_budget_target
+      - canal_ideal
+      - mensagem_ideal
+      - justificativa
+      - recomendacao_operacional
+      - generated_at_utc
+    quality_rules:
+      - "recurso_sugerido deve somar o orcamento informado por cenario"
+      - "tipo_recomendacao deve pertencer ao vocabulario canonico de acoes"
+      - "justificativa deve citar os componentes do score usados na recomendacao"
+      - "nao pode conter microtargeting individual nem dados pessoais de eleitores"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/operational/sprint3_operational_recommendations/operational_recommendations.parquet"
+
+  - dataset_id: serving_operational_scenario_summary
+    layer: serving
+    owner: analytics_product
+    entity: cenario_alocacao
+    fact_or_dimension: summary
+    business_description: "Resumo executivo de orcamento por cenario, com distribuicao por tipo de acao e cluster territorial."
+    source_name: "serving_operational_recommendations"
+    granularity: "dataset_version + scenario_id"
+    primary_key:
+      - dataset_version
+      - scenario
+    required_columns:
+      - scenario
+      - budget_total
+      - recommendations
+      - by_action
+      - by_cluster
+      - action_budget_profile
+      - avg_confidence
+    quality_rules:
+      - "cada execucao deve gerar conservador, hibrido e agressivo"
+      - "by_action deve permitir auditoria do uso de verba por tipo de acao"
+      - "avg_confidence deve estar entre 0 e 1"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/operational/sprint3_operational_recommendations/scenario_budget_summary.json"
+
+  - dataset_id: executive_operational_report
+    layer: serving
+    owner: analytics_product
+    entity: relatorio_executivo
+    fact_or_dimension: export
+    business_description: "PDF e planilha exportaveis para decisao executiva e operacao de campo."
+    source_name: "serving_operational_recommendations + serving_operational_scenario_summary"
+    granularity: "dataset_version"
+    primary_key:
+      - dataset_version
+    required_columns:
+      - executive_report_pdf
+      - operational_workbook_xlsx
+    quality_rules:
+      - "PDF deve abrir como arquivo %PDF valido"
+      - "XLSX deve abrir como pacote Office valido"
+      - "exportacao deve ser gerada sem dependencia de Streamlit"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/operational/sprint3_operational_recommendations/executive_report.pdf"

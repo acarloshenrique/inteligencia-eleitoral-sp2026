@@ -81,7 +81,7 @@ def build_explainability_frame(scores: pd.DataFrame, recommendations: pd.DataFra
             recommendations[keep].drop_duplicates("municipio_id_ibge7"), on="municipio_id_ibge7", how="left"
         )
 
-    rows = []
+    rows: list[dict[str, object]] = []
     for _, row in base.iterrows():
         drivers = _top_drivers(row)
         confidence = _confidence(row)
