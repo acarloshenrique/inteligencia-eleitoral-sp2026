@@ -1,0 +1,16 @@
+version: "2026.04-sprint2"
+score_weights:
+  base_eleitoral_score: 0.30
+  afinidade_tematica_score: 0.20
+  potencial_expansao_score: 0.15
+  custo_eficiencia_score: 0.15
+  concorrencia_score: -0.10
+  capacidade_operacional_score: 0.10
+calibration:
+  default_granularities:
+    - municipio
+    - zona
+    - secao
+  default_top_n_backtest: 20
+  min_join_confidence_for_high_confidence: 0.75
+  min_data_quality_for_public_demo: 0.60

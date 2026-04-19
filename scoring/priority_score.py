@@ -8,7 +8,13 @@ import pandas as pd
 from domain.decision_models import ScoreBreakdown
 from scoring.base_strength import compute_base_strength
 from scoring.competition import compute_competition
-from scoring.config import DEFAULT_SCORE_WEIGHTS, ScoreWeights, ScoringPersistenceResult
+from scoring.config import (
+    DEFAULT_SCORE_WEIGHTS,
+    GRANULARITY_KEYS,
+    SCORE_COLUMNS,
+    ScoreWeights,
+    ScoringPersistenceResult,
+)
 from scoring.cost_efficiency import compute_cost_efficiency
 from scoring.expansion import compute_expansion
 from scoring.explanations import explain_components, explanation_to_summary, explanations_to_dict
@@ -47,6 +53,24 @@ class ScoringEngine:
         df["score_explanation"] = df.apply(lambda row: _explain_row(row, weights), axis=1)
         df["score_weights_version"] = self.weights_version
         return df
+
+    def score_by_granularity(
+        self,
+        territories: pd.DataFrame,
+        *,
+        thematic_vector: dict[str, float],
+        capacidade_operacional: float = 0.7,
+        granularities: tuple[str, ...] = ("municipio", "zona", "secao"),
+    ) -> pd.DataFrame:
+        scored = self.score(
+            territories,
+            thematic_vector=thematic_vector,
+            capacidade_operacional=capacidade_operacional,
+        )
+        frames: list[pd.DataFrame] = []
+        for granularity in granularities:
+            frames.append(self._aggregate_granularity(scored, granularity))
+        return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
     @property
     def weights_version(self) -> str:
@@ -89,6 +113,62 @@ class ScoringEngine:
     def _component_details(self, row: pd.Series, weights: dict[str, float]) -> dict[str, dict[str, float | str]]:
         explanations = explain_components(row.to_dict(), weights)
         return explanations_to_dict(explanations)
+
+    def _aggregate_granularity(self, scored: pd.DataFrame, granularity: str) -> pd.DataFrame:
+        if granularity not in GRANULARITY_KEYS:
+            raise ValueError(f"Granularidade invalida: {granularity}")
+        df = scored.copy()
+        group_cols = [column for column in GRANULARITY_KEYS[granularity] if column in df.columns]
+        if "candidate_id" in df.columns:
+            group_cols = ["candidate_id", *group_cols]
+        if not group_cols:
+            raise ValueError(f"Sem colunas canonicas para granularidade {granularity}")
+        for column in SCORE_COLUMNS:
+            if column not in df.columns:
+                df[column] = 0.0
+        aggregations: dict[str, tuple[str, str]] = {
+            column: (column, "mean") for column in [*SCORE_COLUMNS, "score_prioridade_final"] if column in df.columns
+        }
+        for optional in ["join_confidence", "data_quality_score", "source_coverage_score", "confidence_score"]:
+            if optional in df.columns:
+                aggregations[optional] = (optional, "mean")
+        for optional in ["eleitores_aptos", "total_aptos", "votos_validos", "votos_nominais", "votos", "votos_total"]:
+            if optional in df.columns:
+                aggregations[optional] = (optional, "sum")
+        if "territorio_id" in df.columns:
+            aggregations["territorios_origem"] = ("territorio_id", "nunique")
+        out = df.groupby(group_cols, dropna=False).agg(**aggregations).reset_index()
+        out["score_prioridade_final"] = self._final_from_components(out)
+        out["score_component_details"] = out.apply(lambda row: self._component_details(row, self._weights_dict()), axis=1)
+        out["score_explanation"] = out.apply(lambda row: _explain_row(row, self._weights_dict()), axis=1)
+        out["score_granularity"] = granularity
+        out["score_weights_version"] = self.weights_version
+        out["score_record_id"] = out.apply(lambda row: self._score_record_id(row, group_cols, granularity), axis=1)
+        rank_cols = ["candidate_id"] if "candidate_id" in out.columns else []
+        if rank_cols:
+            out["score_rank"] = (
+                out.groupby(rank_cols, dropna=False)["score_prioridade_final"]
+                .rank(method="first", ascending=False)
+                .astype(int)
+            )
+        else:
+            out["score_rank"] = out["score_prioridade_final"].rank(method="first", ascending=False).astype(int)
+        return out.sort_values(["score_granularity", "score_rank"])
+
+    def _final_from_components(self, df: pd.DataFrame) -> pd.Series:
+        weights = self._weights_dict()
+        score = pd.Series([0.0] * len(df), index=df.index, dtype=float)
+        for col, weight in weights.items():
+            score = score + weight * pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+        return score.clip(0, 1)
+
+    def _score_record_id(self, row: pd.Series, group_cols: list[str], granularity: str) -> str:
+        parts = [granularity]
+        for column in group_cols:
+            value = str(row.get(column, "") or "").strip()
+            if value:
+                parts.append(value)
+        return ":".join(parts)
 
 
 def _explain_row(row: pd.Series, weights: dict[str, float]) -> str:

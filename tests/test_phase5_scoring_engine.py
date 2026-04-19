@@ -17,7 +17,15 @@ def _territories() -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
+                "candidate_id": "cand_1",
                 "territorio_id": "A",
+                "ano_eleicao": 2024,
+                "uf": "SP",
+                "cod_municipio_tse": "71072",
+                "cod_municipio_ibge": "3550308",
+                "municipio_nome": "SAO PAULO",
+                "zona": "0001",
+                "secao": "0001",
                 "municipio": "SAO PAULO",
                 "base_context_score": 0.8,
                 "eleitores_aptos": 1000,
@@ -27,7 +35,15 @@ def _territories() -> pd.DataFrame:
                 "indicadores_tematicos": {"saude": 0.9, "educacao": 0.4},
             },
             {
+                "candidate_id": "cand_1",
                 "territorio_id": "B",
+                "ano_eleicao": 2024,
+                "uf": "SP",
+                "cod_municipio_tse": "67890",
+                "cod_municipio_ibge": "3534401",
+                "municipio_nome": "OSASCO",
+                "zona": "0002",
+                "secao": "0005",
                 "municipio": "OSASCO",
                 "base_context_score": 0.3,
                 "eleitores_aptos": 5000,
@@ -80,7 +96,10 @@ def test_score_weights_load_from_json_and_yaml(tmp_path: Path):
     json_path = tmp_path / "weights.json"
     json_path.write_text(json.dumps({"base_eleitoral_score": 0.4}), encoding="utf-8")
     yaml_path = tmp_path / "weights.yaml"
-    yaml_path.write_text("base_eleitoral_score: 0.25\nconcorrencia_score: -0.05\n", encoding="utf-8")
+    yaml_path.write_text(
+        "version: test\nscore_weights:\n  base_eleitoral_score: 0.25\n  concorrencia_score: -0.05\n",
+        encoding="utf-8",
+    )
 
     json_weights = load_score_weights(json_path)
     yaml_weights = load_score_weights(yaml_path)
@@ -89,6 +108,19 @@ def test_score_weights_load_from_json_and_yaml(tmp_path: Path):
     assert json_weights.afinidade_tematica_score == 0.20
     assert yaml_weights.base_eleitoral_score == 0.25
     assert yaml_weights.concorrencia_score == -0.05
+
+
+def test_scoring_engine_generates_municipio_zona_secao_scores():
+    scored = ScoringEngine().score_by_granularity(
+        _territories(),
+        thematic_vector={"saude": 1.0},
+        capacidade_operacional=0.8,
+    )
+
+    assert set(scored["score_granularity"]) == {"municipio", "zona", "secao"}
+    assert scored["score_prioridade_final"].between(0, 1).all()
+    assert scored["score_record_id"].str.contains("municipio|zona|secao", regex=True).all()
+    assert "score_component_details" in scored.columns
 
 
 def test_scoring_engine_persists_gold_parquet_duckdb_manifest(tmp_path: Path):

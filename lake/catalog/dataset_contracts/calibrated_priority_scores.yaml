@@ -1,0 +1,50 @@
+contracts:
+  - dataset_id: gold_calibrated_priority_scores
+    layer: gold
+    owner: analytics_engineering
+    entity: territorio_eleitoral
+    fact_or_dimension: score
+    business_description: "Scores calibraveis de prioridade por municipio, zona e secao, com pesos versionados e explicacao por componente."
+    source_name: "gold_territorial_electoral_master_index + config/scoring_weights.yaml"
+    granularity: "score_granularity + candidate_id quando disponivel + municipio/zona/secao"
+    primary_key:
+      - score_record_id
+      - score_granularity
+    required_columns:
+      - score_record_id
+      - score_granularity
+      - score_prioridade_final
+      - score_component_details
+      - score_explanation
+      - score_weights_version
+    quality_rules:
+      - "score_prioridade_final deve estar entre 0 e 1"
+      - "cada componente deve carregar peso, valor, contribuicao e racional"
+      - "pesos devem ser alteraveis via YAML sem mudanca de codigo Python"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/gold/marts/sprint2_calibrated_scores/gold_calibrated_priority_scores/gold_calibrated_priority_scores.parquet"
+
+  - dataset_id: score_backtest_metrics
+    layer: quality
+    owner: analytics_engineering
+    entity: scoring_model
+    fact_or_dimension: quality_report
+    business_description: "Metricas simples de backtest comparando ranking previsto com resultado observado agregado quando disponivel."
+    source_name: "gold_calibrated_priority_scores"
+    granularity: "dataset_version + predicted_score_col + actual_score_col"
+    primary_key:
+      - generated_at_utc
+      - predicted_score_col
+      - actual_score_col
+    required_columns:
+      - status
+      - rows
+      - top_n_precision
+      - spearman_rank_correlation
+      - mean_absolute_rank_error
+    quality_rules:
+      - "status deve indicar ok, empty, no_overlap ou actual_not_found"
+      - "backtest deve declarar coluna observada usada"
+      - "metricas nao podem ocultar ausencia de ground truth"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/quality/sprint2_calibrated_scores/score_backtest/backtest_metrics.json"

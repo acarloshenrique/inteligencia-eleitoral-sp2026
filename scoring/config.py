@@ -16,6 +16,21 @@ SCORE_COLUMNS = [
     "capacidade_operacional_score",
 ]
 
+GRANULARITY_KEYS: dict[str, list[str]] = {
+    "municipio": ["ano_eleicao", "uf", "cod_municipio_tse", "cod_municipio_ibge", "municipio_nome"],
+    "zona": ["ano_eleicao", "uf", "cod_municipio_tse", "cod_municipio_ibge", "municipio_nome", "zona"],
+    "secao": [
+        "ano_eleicao",
+        "uf",
+        "cod_municipio_tse",
+        "cod_municipio_ibge",
+        "municipio_nome",
+        "zona",
+        "secao",
+        "local_votacao",
+    ],
+}
+
 
 class ScoreWeights(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -54,17 +69,34 @@ def load_score_weights(path: Path | None = None) -> ScoreWeights:
 
 def _read_simple_yaml(path: Path) -> dict[str, Any]:
     payload: dict[str, Any] = {}
+    section_stack: list[str] = []
+    allowed_keys = set(SCORE_COLUMNS)
     for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.split("#", 1)[0].strip()
+        without_comment = raw_line.split("#", 1)[0].rstrip()
+        line = without_comment.strip()
         if not line or ":" not in line:
             continue
+        indent = len(without_comment) - len(without_comment.lstrip(" "))
         key, value = line.split(":", 1)
         key = key.strip()
         value = value.strip().strip("\"'")
+        if not value:
+            if indent == 0:
+                section_stack = [key]
+            continue
+        if section_stack and section_stack[0] in {"score_weights", "priority_score_weights"} and indent > 0:
+            target_key = key
+        elif indent == 0:
+            section_stack = []
+            target_key = key
+        else:
+            continue
+        if target_key not in allowed_keys:
+            continue
         try:
-            payload[key] = float(value)
+            payload[target_key] = float(value)
         except ValueError:
-            payload[key] = value
+            payload[target_key] = value
     return payload
 
 
