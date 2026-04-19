@@ -1,0 +1,131 @@
+contracts:
+  - dataset_id: serving_multi_candidate_summary
+    layer: serving
+    owner: analytics_product
+    entity: candidato
+    fact_or_dimension: commercial_summary
+    business_description: "Resumo multi-candidato com cobertura territorial, orcamento recomendado e prontidao para comparacao comercial."
+    source_name: "serving_operational_recommendations"
+    granularity: "tenant_id + campaign_id + snapshot_id + candidate_id"
+    primary_key:
+      - tenant_id
+      - campaign_id
+      - snapshot_id
+      - candidate_id
+    required_columns:
+      - candidate_id
+      - scenario_count
+      - territories_recommended
+      - total_budget_all_scenarios
+      - avg_priority_score
+      - avg_confidence_score
+      - top_territories
+      - multi_candidate_ready
+    quality_rules:
+      - "candidate_id deve existir mesmo quando o dado real estiver agregado"
+      - "total_budget_all_scenarios deve ser nao negativo"
+      - "top_territories deve usar apenas agregacao territorial"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/commercial/sprint4_commercial_precision/multi_candidate_summary.parquet"
+
+  - dataset_id: serving_campaign_snapshots
+    layer: serving
+    owner: analytics_product
+    entity: campanha
+    fact_or_dimension: snapshot
+    business_description: "Registro versionado de snapshot por campanha, tenant, ciclo eleitoral e fontes usadas na demo."
+    source_name: "serving_operational_recommendations + gold_calibrated_priority_scores"
+    granularity: "tenant_id + campaign_id + snapshot_id"
+    primary_key:
+      - tenant_id
+      - campaign_id
+      - snapshot_id
+    required_columns:
+      - dataset_version
+      - generated_at_utc
+      - source_operational_path
+      - source_scores_path
+      - election_years_available
+      - planning_cycle
+      - real_data_basis
+      - snapshot_status
+    quality_rules:
+      - "snapshot_id deve ser estavel para o mesmo conjunto de entradas"
+      - "real_data_basis deve indicar explicitamente se SP 2024 foi detectado"
+      - "lgpd_scope deve declarar ausencia de microtargeting individual"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/commercial/sprint4_commercial_precision/campaign_snapshots.parquet"
+
+  - dataset_id: serving_scenario_comparison
+    layer: serving
+    owner: analytics_product
+    entity: cenario_alocacao
+    fact_or_dimension: comparison
+    business_description: "Comparacao entre cenarios conservador, hibrido e agressivo por candidato, acao e orcamento."
+    source_name: "serving_operational_recommendations"
+    granularity: "tenant_id + campaign_id + snapshot_id + candidate_id + scenario_id"
+    primary_key:
+      - candidate_id
+      - scenario_id
+    required_columns:
+      - candidate_id
+      - scenario_id
+      - territories
+      - budget_total
+      - avg_priority_score
+      - avg_confidence_score
+      - budget_delta_vs_hibrido
+      - priority_delta_vs_hibrido
+      - scenario_interpretation
+    quality_rules:
+      - "deve conter os tres cenarios canonicos quando disponiveis"
+      - "budget_delta_vs_hibrido deve usar hibrido como baseline"
+      - "scenario_interpretation deve ser preenchida para leitura executiva"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/commercial/sprint4_commercial_precision/scenario_comparison.parquet"
+
+  - dataset_id: commercial_readiness_report
+    layer: serving
+    owner: analytics_product
+    entity: readiness_comercial
+    fact_or_dimension: quality_report
+    business_description: "Relatorio de prontidao comercial para demo com dados reais SP 2024 e ciclo de planejamento SP 2026."
+    source_name: "serving_multi_candidate_summary + serving_campaign_snapshots + serving_scenario_comparison"
+    granularity: "tenant_id + campaign_id + snapshot_id"
+    primary_key:
+      - tenant_id
+      - campaign_id
+      - snapshot_id
+    required_columns:
+      - readiness_score
+      - status
+      - checks
+      - limitations
+      - lgpd_scope
+      - next_commercial_step
+    quality_rules:
+      - "readiness_score deve estar entre 0 e 1"
+      - "limitacoes devem explicitar se houver apenas candidate_id agregado"
+      - "LGPD scope deve constar no relatorio"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/commercial/sprint4_commercial_precision/readiness_report.json"
+
+  - dataset_id: commercial_demo_sp2024_2026
+    layer: serving
+    owner: analytics_product
+    entity: demo_comercial
+    fact_or_dimension: export
+    business_description: "Pacote exportavel para demonstracao comercial com dados reais SP 2024 aplicados ao planejamento SP 2026."
+    source_name: "serving_multi_candidate_summary + serving_campaign_snapshots + serving_scenario_comparison"
+    granularity: "dataset_version"
+    primary_key:
+      - dataset_version
+    required_columns:
+      - commercial_demo_pack_xlsx
+      - commercial_demo_sp2024_2026_md
+    quality_rules:
+      - "XLSX deve abrir como pacote Office valido"
+      - "Markdown deve apresentar readiness, cenarios e territorios prioritarios"
+      - "demo deve declarar limites de dados e LGPD"
+    lgpd_classification: public_open_data_aggregated_campaign_strategy
+    current_output: "lake/serving/commercial/sprint4_commercial_precision/commercial_demo_pack.xlsx"
