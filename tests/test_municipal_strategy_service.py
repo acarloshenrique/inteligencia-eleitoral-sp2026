@@ -33,8 +33,10 @@ def _paths(root: Path) -> AppPaths:
 def test_municipal_strategy_uses_serving_and_marks_missing_fields(tmp_path: Path) -> None:
     serving_root = tmp_path / "lake" / "serving" / "campaign_id=campanha" / "snapshot_id=s1"
     ranking_dir = serving_root / "serving_territory_ranking"
+    zone_dir = serving_root / "serving_municipality_zone_detail"
     recs_dir = serving_root / "serving_allocation_recommendations"
     ranking_dir.mkdir(parents=True)
+    zone_dir.mkdir(parents=True)
     recs_dir.mkdir(parents=True)
     pd.DataFrame(
         [
@@ -49,6 +51,22 @@ def test_municipal_strategy_uses_serving_and_marks_missing_fields(tmp_path: Path
             }
         ]
     ).to_parquet(ranking_dir / "serving_territory_ranking.parquet", index=False)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "aggregate",
+                "municipio_nome": "SAO PAULO",
+                "zona_id": "2024:SP:71072:Z0001",
+                "zona": "0001",
+                "secoes": 12,
+                "score_prioridade_final": 0.82,
+                "score_disputabilidade": 0.71,
+                "join_confidence": 0.9,
+                "data_quality_score": 0.88,
+                "recomendacao_curta": "priorizar reforco em area competitiva",
+            }
+        ]
+    ).to_parquet(zone_dir / "serving_municipality_zone_detail.parquet", index=False)
     pd.DataFrame(
         [
             {
@@ -75,7 +93,9 @@ def test_municipal_strategy_uses_serving_and_marks_missing_fields(tmp_path: Path
 
     view = MunicipalStrategyService(_paths(tmp_path)).build("SAO PAULO", top_n=5)
 
-    assert view.metrics["score_prioridade_max"] == 0.8
+    assert view.metrics["score_prioridade_max"] == 0.82
     assert view.metrics["competitividade"] == 0.7
+    assert not view.zone_ranking.empty
+    assert view.zone_ranking.iloc[0]["zona"] == "0001"
     assert view.recommendations == ["Prioridade alta para operação local."]
-    assert "score_disputabilidade" in view.missing_fields
+    assert "votos_hist_pt" in view.missing_fields

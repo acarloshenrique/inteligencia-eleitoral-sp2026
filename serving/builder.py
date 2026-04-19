@@ -32,6 +32,14 @@ def series_first(df: pd.DataFrame, aliases: list[str], default: Any = "") -> pd.
     return df[column]
 
 
+def first_non_empty(values: pd.Series) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text and text.lower() != "nan":
+            return text
+    return ""
+
+
 SERVING_OUTPUT_SPECS: dict[str, ServingOutputSpec] = {
     "serving_territory_ranking": ServingOutputSpec(
         output_id="serving_territory_ranking",
@@ -69,6 +77,26 @@ SERVING_OUTPUT_SPECS: dict[str, ServingOutputSpec] = {
         formats=["parquet", "json", "csv"],
         quality_rules=["readiness_score entre 0 e 1", "limitacoes de join explicitadas"],
         join_limitations=["Campos ausentes sao reportados como lacunas, nao inferidos silenciosamente."],
+    ),
+    "serving_zone_ranking": ServingOutputSpec(
+        output_id="serving_zone_ranking",
+        description="Ranking de zonas eleitorais pronto para API/UI, com prioridade, disputa e confianca.",
+        grain="tenant_id + campaign_id + snapshot_id + candidate_id + zona_id",
+        primary_key=["tenant_id", "campaign_id", "snapshot_id", "candidate_id", "zona_id"],
+        source_tables=["gold_zone_priority_score", "gold_section_master_index_quality"],
+        audiences=["api", "ui", "commercial_demo"],
+        quality_rules=["score_prioridade_final entre 0 e 1", "zona_id obrigatorio"],
+        join_limitations=["Zonas sem secao/local herdam limitacoes documentadas no master index."],
+    ),
+    "serving_municipality_zone_detail": ServingOutputSpec(
+        output_id="serving_municipality_zone_detail",
+        description="Detalhe Municipio -> Zonas para analise operacional e explicabilidade territorial.",
+        grain="tenant_id + campaign_id + snapshot_id + candidate_id + municipio_nome + zona",
+        primary_key=["tenant_id", "campaign_id", "snapshot_id", "candidate_id", "municipio_nome", "zona"],
+        source_tables=["gold_zone_priority_score", "gold_section_master_index_quality"],
+        audiences=["api", "ui", "report"],
+        quality_rules=["municipio_nome e zona obrigatorios", "limites de join expostos"],
+        join_limitations=["Nao representa microtargeting individual; leitura agregada por zona/secao."],
     ),
 }
 
@@ -120,11 +148,31 @@ class ServingLayerBuilder:
             generated_at_utc=generated_at,
             warnings=warnings,
         )
+        zone_ranking = self.zone_ranking(
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            dataset_version=dataset_version,
+            tables=tables,
+            generated_at_utc=generated_at,
+            warnings=warnings,
+        )
+        municipality_zone_detail = self.municipality_zone_detail(
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            dataset_version=dataset_version,
+            tables=tables,
+            generated_at_utc=generated_at,
+            warnings=warnings,
+        )
         return ServingBuildResult(
             outputs={
                 "serving_territory_ranking": ranking,
                 "serving_allocation_recommendations": recommendations,
                 "serving_data_readiness": readiness,
+                "serving_zone_ranking": zone_ranking,
+                "serving_municipality_zone_detail": municipality_zone_detail,
             },
             specs=SERVING_OUTPUT_SPECS,
             generated_at_utc=generated_at,
@@ -310,6 +358,133 @@ class ServingLayerBuilder:
                     "join_limitations": "Setor censitario/local de votacao exigem chave explicita ou join aproximado documentado.",
                 }
             ]
+        )
+
+    def zone_ranking(
+        self,
+        *,
+        tenant_id: str,
+        campaign_id: str,
+        snapshot_id: str,
+        dataset_version: str,
+        tables: dict[str, pd.DataFrame],
+        generated_at_utc: str,
+        warnings: list[str],
+    ) -> pd.DataFrame:
+        zones = tables.get("gold_zone_priority_score", pd.DataFrame())
+        if zones.empty:
+            warnings.append("Not found in repo: gold_zone_priority_score; serving_zone_ranking vazio.")
+            return self._empty_status(tenant_id, campaign_id, snapshot_id, dataset_version, generated_at_utc)
+        out = self._stamp(zones.copy(), tenant_id, campaign_id, snapshot_id, dataset_version, generated_at_utc)
+        out["rank_zona"] = (
+            out.groupby("candidate_id", dropna=False)["score_prioridade_final"]
+            .rank(method="first", ascending=False)
+            .astype(int)
+            if "candidate_id" in out.columns and "score_prioridade_final" in out.columns
+            else range(1, len(out) + 1)
+        )
+        if "confidence_score" not in out.columns:
+            out["confidence_score"] = self._confidence(out)
+        keep = [
+            "tenant_id",
+            "campaign_id",
+            "snapshot_id",
+            "dataset_version",
+            "generated_at_utc",
+            "rank_zona",
+            "candidate_id",
+            "zona_id",
+            "uf",
+            "cod_municipio_tse",
+            "cod_municipio_ibge",
+            "municipio_nome",
+            "zona",
+            "territorios",
+            "secoes",
+            "locais_votacao",
+            "score_prioridade_final",
+            "score_disputabilidade",
+            "margem_estimada",
+            "base_eleitoral_score",
+            "potencial_expansao_score",
+            "custo_eficiencia_score",
+            "join_confidence",
+            "data_quality_score",
+            "source_coverage_score",
+            "confidence_score",
+            "recomendacao_curta",
+            "score_explanation",
+        ]
+        return out[[column for column in keep if column in out.columns]].sort_values(
+            ["candidate_id", "rank_zona"], na_position="last"
+        )
+
+    def municipality_zone_detail(
+        self,
+        *,
+        tenant_id: str,
+        campaign_id: str,
+        snapshot_id: str,
+        dataset_version: str,
+        tables: dict[str, pd.DataFrame],
+        generated_at_utc: str,
+        warnings: list[str],
+    ) -> pd.DataFrame:
+        zones = tables.get("gold_zone_priority_score", pd.DataFrame())
+        if zones.empty:
+            warnings.append("Not found in repo: gold_zone_priority_score; serving_municipality_zone_detail vazio.")
+            return self._empty_status(tenant_id, campaign_id, snapshot_id, dataset_version, generated_at_utc)
+        out = zones.copy()
+        quality = tables.get("gold_section_master_index_quality", pd.DataFrame())
+        if not quality.empty and {"municipio_nome", "zona"}.issubset(quality.columns):
+            quality_summary = (
+                quality.groupby(["municipio_nome", "zona"], dropna=False)
+                .agg(
+                    secoes_master=("secao", "nunique"),
+                    locais_master=("local_votacao", lambda values: int(values.astype(str).str.strip().ne("").sum())),
+                    section_quality_score=("section_quality_score", "mean"),
+                    join_is_approximate=("join_is_approximate", "max"),
+                    quality_limitation=("quality_limitation", first_non_empty),
+                )
+                .reset_index()
+            )
+            out = out.merge(quality_summary, on=["municipio_nome", "zona"], how="left")
+        out = self._stamp(out, tenant_id, campaign_id, snapshot_id, dataset_version, generated_at_utc)
+        if "confidence_score" not in out.columns:
+            out["confidence_score"] = self._confidence(out)
+        out["quality_limitation"] = series_first(out, ["quality_limitation"], "sem limitacao registrada")
+        keep = [
+            "tenant_id",
+            "campaign_id",
+            "snapshot_id",
+            "dataset_version",
+            "generated_at_utc",
+            "candidate_id",
+            "uf",
+            "cod_municipio_tse",
+            "cod_municipio_ibge",
+            "municipio_nome",
+            "zona",
+            "zona_id",
+            "territorios",
+            "secoes",
+            "secoes_master",
+            "locais_votacao",
+            "locais_master",
+            "score_prioridade_final",
+            "score_disputabilidade",
+            "margem_estimada",
+            "join_confidence",
+            "data_quality_score",
+            "section_quality_score",
+            "confidence_score",
+            "join_is_approximate",
+            "quality_limitation",
+            "recomendacao_curta",
+            "score_explanation",
+        ]
+        return out[[column for column in keep if column in out.columns]].sort_values(
+            ["municipio_nome", "score_prioridade_final"], ascending=[True, False], na_position="last"
         )
 
     def _stamp(

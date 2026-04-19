@@ -1,0 +1,60 @@
+contracts:
+  - dataset_id: serving_zone_ranking
+    layer: serving
+    owner: analytics_product
+    entity: zona_eleitoral
+    fact_or_dimension: serving_output
+    business_description: "Ranking de zonas eleitorais para decisao operacional por municipio e candidato."
+    source_name: "gold_zone_priority_score"
+    granularity: "tenant_id + campaign_id + snapshot_id + candidate_id + zona_id"
+    primary_key:
+      - tenant_id
+      - campaign_id
+      - snapshot_id
+      - candidate_id
+      - zona_id
+    required_columns:
+      - municipio_nome
+      - zona
+      - score_prioridade_final
+      - score_disputabilidade
+      - join_confidence
+      - data_quality_score
+      - confidence_score
+      - recomendacao_curta
+    quality_rules:
+      - "scores devem estar entre 0 e 1"
+      - "zona_id deve ser unico por candidato e snapshot"
+      - "joins aproximados devem permanecer documentados na camada de qualidade"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/serving/campaign_id=campanha_sp_2026/snapshot_id=sprint1_zone_precision/serving_zone_ranking/serving_zone_ranking.parquet"
+
+  - dataset_id: serving_municipality_zone_detail
+    layer: serving
+    owner: analytics_product
+    entity: municipio_zona_eleitoral
+    fact_or_dimension: serving_output
+    business_description: "Detalhe Municipio -> Zonas com prioridade, disputabilidade, qualidade de join e recomendacao curta."
+    source_name: "gold_zone_priority_score + gold_section_master_index_quality"
+    granularity: "tenant_id + campaign_id + snapshot_id + candidate_id + municipio_nome + zona"
+    primary_key:
+      - tenant_id
+      - campaign_id
+      - snapshot_id
+      - candidate_id
+      - municipio_nome
+      - zona
+    required_columns:
+      - municipio_nome
+      - zona
+      - score_prioridade_final
+      - score_disputabilidade
+      - section_quality_score
+      - quality_limitation
+      - recomendacao_curta
+    quality_rules:
+      - "quality_limitation deve estar preenchido"
+      - "nao pode conter dados pessoais de eleitores"
+      - "leitura deve permanecer agregada por zona/secao/local"
+    lgpd_classification: public_open_data_aggregated
+    current_output: "lake/serving/campaign_id=campanha_sp_2026/snapshot_id=sprint1_zone_precision/serving_municipality_zone_detail/data.parquet"

@@ -1,0 +1,71 @@
+{
+  "tenant_id": "default",
+  "campaign_id": "campanha_sp_2026",
+  "snapshot_id": "sprint1_zone_precision",
+  "dataset_version": "sprint1_zone_precision",
+  "steps": [
+    {
+      "step": "master_index",
+      "status": "ok",
+      "outputs": {
+        "master_index": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\territorial_electoral_master_index\\gold_territorial_electoral_master_index_tse2024_sp_secao_real_ibge_v2.parquet"
+      },
+      "message": "103021 registros carregados."
+    },
+    {
+      "step": "gold",
+      "status": "ok",
+      "outputs": {
+        "gold_candidate_context": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_candidate_context\\gold_candidate_context.parquet",
+        "gold_territory_profile": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_territory_profile\\gold_territory_profile.parquet",
+        "gold_electoral_base_strength": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_electoral_base_strength\\gold_electoral_base_strength.parquet",
+        "gold_competition_landscape": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_competition_landscape\\gold_competition_landscape.parquet",
+        "gold_campaign_finance_efficiency": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_campaign_finance_efficiency\\gold_campaign_finance_efficiency.parquet",
+        "gold_thematic_affinity": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_thematic_affinity\\gold_thematic_affinity.parquet",
+        "gold_priority_score": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_priority_score\\gold_priority_score.parquet",
+        "gold_allocation_inputs": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_allocation_inputs\\gold_allocation_inputs.parquet",
+        "gold_allocation_recommendations": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_allocation_recommendations\\gold_allocation_recommendations.parquet",
+        "gold_territorial_clusters": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_territorial_clusters\\gold_territorial_clusters.parquet",
+        "gold_candidate_comparisons": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_candidate_comparisons\\gold_candidate_comparisons.parquet",
+        "gold_zone_priority_score": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_zone_priority_score\\gold_zone_priority_score.parquet",
+        "gold_section_master_index_quality": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\marts\\sprint1_zone_precision\\gold_section_master_index_quality\\gold_section_master_index_quality.parquet"
+      },
+      "message": "Marts gold recalculados a partir do master index."
+    },
+    {
+      "step": "quality",
+      "status": "ok",
+      "outputs": {
+        "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\quality\\sprint1_zone_precision\\lake_health_report.json",
+        "markdown": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\quality\\sprint1_zone_precision\\lake_health_report.md"
+      },
+      "message": "Data quality calculado para tabelas disponíveis."
+    },
+    {
+      "step": "semantic",
+      "status": "ok",
+      "outputs": {
+        "json": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\semantic\\sprint1_zone_precision\\semantic_registry.json",
+        "markdown": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\semantic\\sprint1_zone_precision\\semantic_registry.md"
+      },
+      "message": "Semantic registry exportado."
+    },
+    {
+      "step": "commercial",
+      "status": "ok",
+      "outputs": {
+        "snapshot": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\commercial_snapshots\\campanha_sp_2026\\sprint1_zone_precision\\snapshot.json",
+        "export_manifest": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\artifacts\\commercial\\default\\campanha_sp_2026\\sprint1_zone_precision\\commercial_export_manifest.json"
+      },
+      "message": "Marts comerciais, snapshot e exports gerados."
+    },
+    {
+      "step": "serving",
+      "status": "ok",
+      "outputs": {
+        "manifest": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\serving\\campaign_id=campanha_sp_2026\\snapshot_id=sprint1_zone_precision\\serving_manifest.json"
+      },
+      "message": "Outputs serving materializados para API/UI."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "source_path": "C:\\Users\\ataqu\\OneDrive\\Área de Trabalho\\Codex Workspace\\Inteligência Eleitoral\\inteligencia-eleitoral-sp2026\\lake\\gold\\territorial_electoral_master_index\\gold_territorial_electoral_master_index_tse2024_sp_secao_real_ibge_v2.parquet",
+  "rows": 103021,
+  "zonas": 779,
+  "secoes": 103021,
+  "municipios": 645,
+  "join_confidence_avg": 0.9983571310703643
+}

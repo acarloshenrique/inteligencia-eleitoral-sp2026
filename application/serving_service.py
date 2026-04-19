@@ -61,13 +61,16 @@ class ServingOutputService:
             campaign_id=campaign_id,
             snapshot_id=snapshot_id,
         )
-        output_path = root / output_id / f"{output_id}.parquet"
-        if not output_path.exists():
-            output_path = root / output_id / "data.parquet"
-        if not output_path.exists():
-            output_path = root / output_id / f"{output_id}.csv"
+        output_path = self._resolve_output_path(
+            output_id,
+            tenant_id=effective_tenant,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            preferred_root=root,
+        )
         if not output_path.exists():
             raise ServingDataNotFoundError(f"Not found in repo: {output_id}")
+        root = output_path.parent.parent
 
         frame = pd.read_parquet(output_path) if output_path.suffix == ".parquet" else pd.read_csv(output_path)
         frame = self._apply_filters(frame, filters or {})
@@ -143,6 +146,54 @@ class ServingOutputService:
             limit=1,
         )
 
+    def zone_ranking(
+        self,
+        *,
+        tenant_id: str | None = None,
+        campaign_id: str | None = None,
+        snapshot_id: str | None = None,
+        candidate_id: str | None = None,
+        municipio_nome: str | None = None,
+        limit: int = 100,
+    ) -> ServingReadResult:
+        filters: dict[str, Any] = {}
+        if candidate_id:
+            filters["candidate_id"] = candidate_id
+        if municipio_nome:
+            filters["municipio_nome"] = municipio_nome
+        return self.read_output(
+            "serving_zone_ranking",
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            filters=filters,
+            limit=limit,
+        )
+
+    def municipality_zone_detail(
+        self,
+        *,
+        tenant_id: str | None = None,
+        campaign_id: str | None = None,
+        snapshot_id: str | None = None,
+        candidate_id: str | None = None,
+        municipio_nome: str | None = None,
+        limit: int = 200,
+    ) -> ServingReadResult:
+        filters: dict[str, Any] = {}
+        if candidate_id:
+            filters["candidate_id"] = candidate_id
+        if municipio_nome:
+            filters["municipio_nome"] = municipio_nome
+        return self.read_output(
+            "serving_municipality_zone_detail",
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            filters=filters,
+            limit=limit,
+        )
+
     def _apply_filters(self, frame: pd.DataFrame, filters: dict[str, Any]) -> pd.DataFrame:
         out = frame
         for column, value in filters.items():
@@ -172,6 +223,35 @@ class ServingOutputService:
         if not snapshot_roots:
             raise ServingDataNotFoundError("Not found in repo: serving snapshot")
         return sorted(snapshot_roots, key=lambda path: path.stat().st_mtime, reverse=True)[0]
+
+    def _resolve_output_path(
+        self,
+        output_id: str,
+        *,
+        tenant_id: str,
+        campaign_id: str | None,
+        snapshot_id: str | None,
+        preferred_root: Path,
+    ) -> Path:
+        preferred = self._output_candidates(preferred_root, output_id)
+        for path in preferred:
+            if path.exists():
+                return path
+        existing = [path for path in self._candidate_serving_roots(tenant_id) if path.exists()]
+        roots = self._snapshot_roots(self._campaign_roots(existing, campaign_id), snapshot_id)
+        for root in sorted(roots, key=lambda path: path.stat().st_mtime, reverse=True):
+            for path in self._output_candidates(root, output_id):
+                if path.exists():
+                    return path
+        return preferred[0]
+
+    def _output_candidates(self, root: Path, output_id: str) -> list[Path]:
+        return [
+            root / output_id / f"{output_id}.parquet",
+            root / output_id / "data.parquet",
+            root / output_id / f"{output_id}.csv",
+            root / output_id / "data.csv",
+        ]
 
     def _candidate_serving_roots(self, tenant_id: str) -> list[Path]:
         roots = [

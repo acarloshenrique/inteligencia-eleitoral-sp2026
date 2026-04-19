@@ -93,6 +93,8 @@ def test_gold_specs_cover_required_commercial_marts() -> None:
         "gold_allocation_recommendations",
         "gold_territorial_clusters",
         "gold_candidate_comparisons",
+        "gold_zone_priority_score",
+        "gold_section_master_index_quality",
     }.issubset(GOLD_TABLE_SPECS)
     for spec in GOLD_TABLE_SPECS.values():
         assert spec.grain
@@ -131,6 +133,12 @@ def test_gold_builder_creates_all_marts_with_scores_and_recommendations() -> Non
     recommendations = tables["gold_allocation_recommendations"]
     assert round(float(recommendations["recurso_sugerido"].sum()), 2) == 50000.0
     assert recommendations["percentual_orcamento_sugerido"].between(0, 1).all()
+    zone_priority = tables["gold_zone_priority_score"]
+    section_quality = tables["gold_section_master_index_quality"]
+    assert not zone_priority.empty
+    assert {"zona_id", "score_disputabilidade", "recomendacao_curta"}.issubset(zone_priority.columns)
+    assert section_quality["section_quality_score"].between(0, 1).all()
+    assert "quality_limitation" in section_quality.columns
 
 
 def test_gold_writer_persists_manifests_and_duckdb_examples(tmp_path: Path) -> None:

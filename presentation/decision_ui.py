@@ -354,6 +354,12 @@ def render_municipal_strategy(paths) -> None:
     for item in view.recommendations:
         st.write(f"- {item}")
 
+    st.markdown("#### Zonas eleitorais prioritarias")
+    if view.zone_ranking.empty:
+        st.info("Not found in repo: ranking de zonas para o municipio selecionado.")
+    else:
+        st.dataframe(view.zone_ranking, width="stretch", hide_index=True)
+
     st.markdown("#### Ranking de prioridade")
     if view.priority_ranking.empty:
         st.info("Not found in repo: ranking de prioridade para o municipio selecionado.")

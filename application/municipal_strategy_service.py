@@ -16,6 +16,7 @@ class MunicipalStrategyView:
     snapshot_id: str
     metrics: dict[str, Any]
     priority_ranking: pd.DataFrame
+    zone_ranking: pd.DataFrame
     recommendations: list[str]
     rag_context: dict[str, Any]
     missing_fields: list[str]
@@ -53,19 +54,22 @@ class MunicipalStrategyService:
     def build(self, municipio: str, *, top_n: int = 20) -> MunicipalStrategyView:
         frames = self._load_frames()
         ranking = self._filter_municipio(frames.get("serving_territory_ranking", pd.DataFrame()), municipio)
+        zone_detail = self._filter_municipio(frames.get("serving_municipality_zone_detail", pd.DataFrame()), municipio)
         recs = self._filter_municipio(frames.get("serving_allocation_recommendations", pd.DataFrame()), municipio)
         zone_fact = self._filter_municipio(frames.get("fact_zona_eleitoral", pd.DataFrame()), municipio)
         priority_gold = self._filter_municipio(frames.get("gold_priority_score", pd.DataFrame()), municipio)
-        base = ranking if not ranking.empty else priority_gold
+        base = zone_detail if not zone_detail.empty else ranking if not ranking.empty else priority_gold
         metrics = self._metrics(base=base, zone_fact=zone_fact)
         missing = self._missing_fields(base=base, zone_fact=zone_fact)
         output = self._ranking_table(base=base, recs=recs, top_n=top_n)
+        zone_output = self._zone_table(zone_detail if not zone_detail.empty else zone_fact, top_n=top_n)
         recommendations = self._recommendations(metrics=metrics, ranking=output, recs=recs)
         return MunicipalStrategyView(
             municipio=municipio,
             snapshot_id=str(frames.get("_snapshot_id", "")),
             metrics=metrics,
             priority_ranking=output,
+            zone_ranking=zone_output,
             recommendations=recommendations,
             rag_context=self._rag_context(base=base, zone_fact=zone_fact),
             missing_fields=missing,
@@ -81,6 +85,13 @@ class MunicipalStrategyService:
             frames["_source_paths"].append(result.path)
         except ServingDataNotFoundError:
             frames["serving_territory_ranking"] = pd.DataFrame()
+        try:
+            result = self.serving.read_output("serving_municipality_zone_detail", tenant_id=self.paths.tenant_id, limit=0)
+            frames["serving_municipality_zone_detail"] = pd.DataFrame(result.records)
+            frames["_snapshot_id"] = result.snapshot_id
+            frames["_source_paths"].append(result.path)
+        except ServingDataNotFoundError:
+            frames["serving_municipality_zone_detail"] = pd.DataFrame()
         try:
             result = self.serving.read_output(
                 "serving_allocation_recommendations", tenant_id=self.paths.tenant_id, limit=0
@@ -161,6 +172,33 @@ class MunicipalStrategyService:
             "tipo_acao_sugerida",
             "recurso_sugerido",
             "justificativa",
+        ]
+        columns = [column for column in preferred if column in out.columns]
+        return out[columns].head(top_n) if columns else out.head(top_n)
+
+    def _zone_table(self, df: pd.DataFrame, top_n: int) -> pd.DataFrame:
+        if df.empty:
+            return pd.DataFrame()
+        out = df.copy()
+        sort_col = first_existing(out, ["score_prioridade_final", "score_prioridade", "rank_zona"])
+        if sort_col:
+            out = out.sort_values(sort_col, ascending=sort_col == "rank_zona")
+        preferred = [
+            "rank_zona",
+            "zona_id",
+            "zona",
+            "secoes",
+            "secoes_master",
+            "locais_votacao",
+            "score_prioridade_final",
+            "score_disputabilidade",
+            "margem_estimada",
+            "join_confidence",
+            "data_quality_score",
+            "section_quality_score",
+            "confidence_score",
+            "quality_limitation",
+            "recomendacao_curta",
         ]
         columns = [column for column in preferred if column in out.columns]
         return out[columns].head(top_n) if columns else out.head(top_n)

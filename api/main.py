@@ -487,6 +487,72 @@ def get_serving_allocation_recommendations(
     return _serving_response(result)
 
 
+@app.get("/v1/serving/zone-ranking", response_model=ServingOutputResponse)
+def get_serving_zone_ranking(
+    request: Request,
+    campaign_id: str | None = None,
+    snapshot_id: str | None = None,
+    candidate_id: str | None = None,
+    municipio_nome: str | None = None,
+    limit: int = 100,
+    auth: AuthContext = Depends(require_roles("admin", "operator", "viewer")),
+):
+    tenant_id = _tenant_id()
+    try:
+        result = _serving_service().zone_ranking(
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            candidate_id=candidate_id,
+            municipio_nome=municipio_nome,
+            limit=limit,
+        )
+    except ServingDataNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    _metadata_db().log_audit(
+        actor=auth.actor,
+        role=auth.role,
+        action="get_serving_zone_ranking",
+        resource="serving_zone_ranking",
+        metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
+        tenant_id=tenant_id,
+    )
+    return _serving_response(result)
+
+
+@app.get("/v1/serving/municipality-zone-detail", response_model=ServingOutputResponse)
+def get_serving_municipality_zone_detail(
+    request: Request,
+    campaign_id: str | None = None,
+    snapshot_id: str | None = None,
+    candidate_id: str | None = None,
+    municipio_nome: str | None = None,
+    limit: int = 200,
+    auth: AuthContext = Depends(require_roles("admin", "operator", "viewer")),
+):
+    tenant_id = _tenant_id()
+    try:
+        result = _serving_service().municipality_zone_detail(
+            tenant_id=tenant_id,
+            campaign_id=campaign_id,
+            snapshot_id=snapshot_id,
+            candidate_id=candidate_id,
+            municipio_nome=municipio_nome,
+            limit=limit,
+        )
+    except ServingDataNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    _metadata_db().log_audit(
+        actor=auth.actor,
+        role=auth.role,
+        action="get_serving_municipality_zone_detail",
+        resource="serving_municipality_zone_detail",
+        metadata={**audit_metadata_from_request(request), "token_fp": auth.token_fingerprint},
+        tenant_id=tenant_id,
+    )
+    return _serving_response(result)
+
+
 @app.get("/v1/serving/data-readiness", response_model=ServingOutputResponse)
 def get_serving_data_readiness(
     request: Request,

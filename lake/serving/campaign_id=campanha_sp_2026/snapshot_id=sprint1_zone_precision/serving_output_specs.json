@@ -1,0 +1,174 @@
+{
+  "serving_territory_ranking": {
+    "output_id": "serving_territory_ranking",
+    "description": "Ranking territorial pronto para API/UI, com score, territorio, acao e confianca.",
+    "grain": "tenant_id + campaign_id + snapshot_id + candidate_id + territorio_id",
+    "primary_key": [
+      "tenant_id",
+      "campaign_id",
+      "snapshot_id",
+      "candidate_id",
+      "territorio_id"
+    ],
+    "source_tables": [
+      "gold_priority_score",
+      "gold_territory_profile",
+      "gold_allocation_recommendations"
+    ],
+    "audiences": [
+      "api",
+      "ui",
+      "commercial_demo"
+    ],
+    "formats": [
+      "parquet",
+      "csv"
+    ],
+    "quality_rules": [
+      "score_prioridade_final entre 0 e 1",
+      "candidate_id e territorio_id obrigatorios"
+    ],
+    "lgpd_classification": "derived_aggregate_or_campaign_confidential",
+    "join_limitations": [
+      "Granularidade de setor censitario depende de cd_setor/geocoding no master index."
+    ]
+  },
+  "serving_allocation_recommendations": {
+    "output_id": "serving_allocation_recommendations",
+    "description": "Recomendacoes finais de alocacao para API, UI, relatorio e motor de recomendacao.",
+    "grain": "tenant_id + campaign_id + snapshot_id + scenario_id + candidate_id + territorio_id",
+    "primary_key": [
+      "tenant_id",
+      "campaign_id",
+      "snapshot_id",
+      "scenario_id",
+      "candidate_id",
+      "territorio_id"
+    ],
+    "source_tables": [
+      "gold_allocation_recommendations",
+      "gold_priority_score"
+    ],
+    "audiences": [
+      "api",
+      "ui",
+      "report",
+      "recommendation_engine"
+    ],
+    "formats": [
+      "parquet",
+      "csv"
+    ],
+    "quality_rules": [
+      "recurso_sugerido nao negativo",
+      "justificativa nao vazia",
+      "sem dados pessoais de eleitores"
+    ],
+    "lgpd_classification": "campaign_operational_confidential",
+    "join_limitations": [
+      "ROI politico e estimativo; nao representa inferencia individual de preferencia politica."
+    ]
+  },
+  "serving_data_readiness": {
+    "output_id": "serving_data_readiness",
+    "description": "Resumo operacional de cobertura, qualidade e prontidao comercial do lake.",
+    "grain": "tenant_id + campaign_id + snapshot_id",
+    "primary_key": [
+      "tenant_id",
+      "campaign_id",
+      "snapshot_id"
+    ],
+    "source_tables": [
+      "lake_health_report",
+      "gold_territorial_electoral_master_index",
+      "gold_priority_score",
+      "gold_allocation_recommendations"
+    ],
+    "audiences": [
+      "api",
+      "ui",
+      "report",
+      "commercial_demo"
+    ],
+    "formats": [
+      "parquet",
+      "json",
+      "csv"
+    ],
+    "quality_rules": [
+      "readiness_score entre 0 e 1",
+      "limitacoes de join explicitadas"
+    ],
+    "lgpd_classification": "derived_aggregate_or_campaign_confidential",
+    "join_limitations": [
+      "Campos ausentes sao reportados como lacunas, nao inferidos silenciosamente."
+    ]
+  },
+  "serving_zone_ranking": {
+    "output_id": "serving_zone_ranking",
+    "description": "Ranking de zonas eleitorais pronto para API/UI, com prioridade, disputa e confianca.",
+    "grain": "tenant_id + campaign_id + snapshot_id + candidate_id + zona_id",
+    "primary_key": [
+      "tenant_id",
+      "campaign_id",
+      "snapshot_id",
+      "candidate_id",
+      "zona_id"
+    ],
+    "source_tables": [
+      "gold_zone_priority_score",
+      "gold_section_master_index_quality"
+    ],
+    "audiences": [
+      "api",
+      "ui",
+      "commercial_demo"
+    ],
+    "formats": [
+      "parquet",
+      "csv"
+    ],
+    "quality_rules": [
+      "score_prioridade_final entre 0 e 1",
+      "zona_id obrigatorio"
+    ],
+    "lgpd_classification": "derived_aggregate_or_campaign_confidential",
+    "join_limitations": [
+      "Zonas sem secao/local herdam limitacoes documentadas no master index."
+    ]
+  },
+  "serving_municipality_zone_detail": {
+    "output_id": "serving_municipality_zone_detail",
+    "description": "Detalhe Municipio -> Zonas para analise operacional e explicabilidade territorial.",
+    "grain": "tenant_id + campaign_id + snapshot_id + candidate_id + municipio_nome + zona",
+    "primary_key": [
+      "tenant_id",
+      "campaign_id",
+      "snapshot_id",
+      "candidate_id",
+      "municipio_nome",
+      "zona"
+    ],
+    "source_tables": [
+      "gold_zone_priority_score",
+      "gold_section_master_index_quality"
+    ],
+    "audiences": [
+      "api",
+      "ui",
+      "report"
+    ],
+    "formats": [
+      "parquet",
+      "csv"
+    ],
+    "quality_rules": [
+      "municipio_nome e zona obrigatorios",
+      "limites de join expostos"
+    ],
+    "lgpd_classification": "derived_aggregate_or_campaign_confidential",
+    "join_limitations": [
+      "Nao representa microtargeting individual; leitura agregada por zona/secao."
+    ]
+  }
+}

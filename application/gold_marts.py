@@ -218,6 +218,38 @@ GOLD_TABLE_SPECS: dict[str, GoldTableSpec] = {
         consumers=["competicao", "copiloto analitico", "relatorios"],
         data_quality_checks=["territorio_id unico"],
     ),
+    "gold_zone_priority_score": GoldTableSpec(
+        table_name="gold_zone_priority_score",
+        grain="candidate_id + ano_eleicao + uf + cod_municipio_tse + zona",
+        business_definition=(
+            "Prioridade eleitoral agregada por zona para decisao operacional de campanha em municipio."
+        ),
+        metric_definitions={
+            "score_prioridade_final": "media ponderada dos scores de territorios/secao na zona",
+            "score_disputabilidade": "proxy de disputa territorial, maior quando a margem estimada e baixa",
+            "source_coverage_score": "cobertura media das fontes usadas na zona",
+        },
+        source_lineage=["gold_priority_score", "gold_territory_profile", "gold_competition_landscape"],
+        refresh_policy="semanal ou apos recomputacao do master index/scoring",
+        consumers=["analise municipal", "ranking por zona", "simulador operacional"],
+        data_quality_checks=["uma linha por candidate_id + municipio + zona", "scores entre 0 e 1"],
+    ),
+    "gold_section_master_index_quality": GoldTableSpec(
+        table_name="gold_section_master_index_quality",
+        grain="ano_eleicao + uf + cod_municipio_tse + zona + secao + local_votacao",
+        business_definition=(
+            "Qualidade e rastreabilidade do master index por secao/local de votacao para expor limites de precisao."
+        ),
+        metric_definitions={
+            "section_quality_score": "combinacao de confianca de join e cobertura de fonte na secao",
+            "join_confidence": "confianca media declarada para as relacoes da linha",
+            "source_coverage_score": "cobertura media das bases integradas na secao",
+        },
+        source_lineage=["gold_territorial_electoral_master_index"],
+        refresh_policy="apos cada geracao do master index",
+        consumers=["data readiness", "explicabilidade", "auditoria de joins"],
+        data_quality_checks=["join_strategy explicita", "relacoes aproximadas sinalizadas"],
+    ),
 }
 
 
@@ -248,6 +280,8 @@ class GoldMartBuilder:
         )
         clusters = self.gold_territorial_clusters(priority, territory_profile)
         comparisons = self.gold_candidate_comparisons(base_strength, priority)
+        zone_priority = self.gold_zone_priority_score(priority, territory_profile, competition)
+        section_quality = self.gold_section_master_index_quality(master_index)
         return {
             "gold_candidate_context": candidate_context,
             "gold_territory_profile": territory_profile,
@@ -260,6 +294,8 @@ class GoldMartBuilder:
             "gold_allocation_recommendations": recommendations,
             "gold_territorial_clusters": clusters,
             "gold_candidate_comparisons": comparisons,
+            "gold_zone_priority_score": zone_priority,
+            "gold_section_master_index_quality": section_quality,
         }
 
     def gold_candidate_context(self, master: pd.DataFrame, profiles: pd.DataFrame | None = None) -> pd.DataFrame:
@@ -610,6 +646,169 @@ class GoldMartBuilder:
             )
         return pd.DataFrame(records)
 
+    def gold_zone_priority_score(
+        self,
+        priority: pd.DataFrame,
+        territory_profile: pd.DataFrame,
+        competition: pd.DataFrame,
+    ) -> pd.DataFrame:
+        if priority.empty:
+            return pd.DataFrame(
+                columns=[
+                    "candidate_id",
+                    "zona_id",
+                    "uf",
+                    "municipio_nome",
+                    "zona",
+                    "score_prioridade_final",
+                    "score_disputabilidade",
+                    "join_confidence",
+                    "data_quality_score",
+                ]
+            )
+        territory_columns = [
+            column
+            for column in [
+                "territorio_id",
+                "ano_eleicao",
+                "uf",
+                "cod_municipio_tse",
+                "cod_municipio_ibge",
+                "municipio_nome",
+                "zona",
+                "secao",
+                "local_votacao",
+                "secoes",
+                "locais_votacao",
+                "data_quality_score",
+                "join_confidence_avg",
+                "source_coverage_avg",
+            ]
+            if column in territory_profile.columns and (column == "territorio_id" or column not in priority.columns)
+        ]
+        out = priority.merge(
+            territory_profile[territory_columns].drop_duplicates("territorio_id"),
+            on="territorio_id",
+            how="left",
+        )
+        if not competition.empty and "territorio_id" in competition.columns:
+            comp_columns = [
+                column
+                for column in ["territorio_id", "leader_margin_score", "competition_score", "leader_candidate_id"]
+                if column in competition.columns and column not in out.columns
+            ]
+            if comp_columns:
+                out = out.merge(competition[["territorio_id", *comp_columns]], on="territorio_id", how="left")
+        out["ano_eleicao"] = numeric(series_first(out, ["ano_eleicao"], 0)).astype("Int64")
+        out["uf"] = series_first(out, ["uf"], "").astype(str).str.upper().str.strip()
+        out["cod_municipio_tse"] = series_first(out, ["cod_municipio_tse"], "").astype(str).str.zfill(5)
+        out["cod_municipio_ibge"] = series_first(out, ["cod_municipio_ibge"], "").astype(str)
+        out["municipio_nome"] = series_first(out, ["municipio_nome"], "").astype(str)
+        out["zona"] = series_first(out, ["zona"], "").astype(str).str.zfill(4)
+        out["score_disputabilidade"] = numeric(series_first(out, ["competition_score"], 0.5)).clip(0, 1)
+        out["margem_estimada"] = numeric(series_first(out, ["leader_margin_score"], 1.0)).clip(0, 1)
+        out["join_confidence"] = numeric(series_first(out, ["join_confidence"], 0.0)).clip(0, 1)
+        out["data_quality_score"] = numeric(series_first(out, ["data_quality_score"], 0.0)).clip(0, 1)
+        for column, default in {
+            "secao": "",
+            "local_votacao": "",
+            "base_strength_score": 0.0,
+            "potencial_expansao_score": 0.0,
+            "finance_efficiency_score": 0.0,
+            "source_coverage_score": 0.0,
+            "score_explanation": "",
+        }.items():
+            if column not in out.columns:
+                out[column] = default
+        group_cols = [
+            "candidate_id",
+            "ano_eleicao",
+            "uf",
+            "cod_municipio_tse",
+            "cod_municipio_ibge",
+            "municipio_nome",
+            "zona",
+        ]
+        grouped = (
+            out.groupby(group_cols, dropna=False)
+            .agg(
+                territorios=("territorio_id", "nunique"),
+                secoes=("secao", count_non_empty),
+                locais_votacao=("local_votacao", count_non_empty),
+                score_prioridade_final=("score_prioridade_final", "mean"),
+                score_disputabilidade=("score_disputabilidade", "mean"),
+                margem_estimada=("margem_estimada", "mean"),
+                base_eleitoral_score=("base_strength_score", "mean"),
+                potencial_expansao_score=("potencial_expansao_score", "mean"),
+                custo_eficiencia_score=("finance_efficiency_score", "mean"),
+                join_confidence=("join_confidence", "mean"),
+                data_quality_score=("data_quality_score", "mean"),
+                source_coverage_score=("source_coverage_score", "mean"),
+                score_explanation=("score_explanation", first_non_empty),
+            )
+            .reset_index()
+        )
+        grouped["zona_id"] = (
+            grouped["ano_eleicao"].astype(str)
+            + ":"
+            + grouped["uf"].astype(str)
+            + ":"
+            + grouped["cod_municipio_tse"].astype(str)
+            + ":Z"
+            + grouped["zona"].astype(str)
+        )
+        grouped["confidence_score"] = (
+            0.55 * numeric(grouped["score_prioridade_final"])
+            + 0.25 * numeric(grouped["join_confidence"])
+            + 0.20 * numeric(grouped["data_quality_score"])
+        ).clip(0, 1)
+        grouped["recomendacao_curta"] = grouped.apply(self._zone_recommendation, axis=1)
+        return grouped.sort_values(["candidate_id", "score_prioridade_final"], ascending=[True, False])
+
+    def gold_section_master_index_quality(self, master: pd.DataFrame) -> pd.DataFrame:
+        df = self._ensure_territory_columns(master)
+        df["join_strategy"] = series_first(df, ["join_strategy"], "not_documented").astype(str)
+        group_cols = [
+            "ano_eleicao",
+            "uf",
+            "cod_municipio_tse",
+            "cod_municipio_ibge",
+            "municipio_nome",
+            "zona",
+            "secao",
+            "local_votacao",
+        ]
+        grouped = (
+            df.groupby(group_cols, dropna=False)
+            .agg(
+                registros=("master_record_id", "nunique"),
+                candidatos=("candidate_id", count_non_empty),
+                setores_censitarios=("cd_setor", count_non_empty),
+                join_strategy=("join_strategy", first_non_empty),
+                join_confidence=("join_confidence", "mean"),
+                source_coverage_score=("source_coverage_score", "mean"),
+            )
+            .reset_index()
+        )
+        grouped["section_quality_score"] = (
+            0.65 * numeric(grouped["join_confidence"]) + 0.35 * numeric(grouped["source_coverage_score"])
+        ).clip(0, 1)
+        grouped["join_is_exact"] = grouped["join_strategy"].astype(str).str.contains("exact|codigo", case=False, regex=True)
+        grouped["join_is_approximate"] = grouped["join_strategy"].astype(str).str.contains(
+            "fuzzy|approx|nome|infer", case=False, regex=True
+        )
+        grouped["quality_limitation"] = grouped.apply(
+            lambda row: "join aproximado documentado"
+            if bool(row["join_is_approximate"])
+            else "sem secao no master index"
+            if not str(row["secao"]).strip()
+            else "sem limitacao critica registrada"
+            if float(row["section_quality_score"]) >= 0.75
+            else "baixa confianca/cobertura de fonte",
+            axis=1,
+        )
+        return grouped
+
     def _master_with_territory(self, master: pd.DataFrame) -> pd.DataFrame:
         out = master.copy()
         out = self._ensure_territory_columns(out)
@@ -679,6 +878,21 @@ class GoldMartBuilder:
         if value >= 0.4:
             return "monitoramento"
         return "baixo_retorno"
+
+    def _zone_recommendation(self, row: pd.Series) -> str:
+        priority = float(row.get("score_prioridade_final", 0.0) or 0.0)
+        dispute = float(row.get("score_disputabilidade", 0.0) or 0.0)
+        expansion = float(row.get("potencial_expansao_score", 0.0) or 0.0)
+        quality = float(row.get("data_quality_score", 0.0) or 0.0)
+        if quality < 0.5:
+            return "validar dados antes de decisao operacional"
+        if priority >= 0.7 and dispute >= 0.65:
+            return "priorizar reforco em area competitiva"
+        if priority >= 0.7:
+            return "priorizar presenca fisica e liderancas locais"
+        if expansion >= 0.65:
+            return "testar expansao territorial controlada"
+        return "monitorar e manter baixo investimento"
 
 
 class GoldMartWriter:
